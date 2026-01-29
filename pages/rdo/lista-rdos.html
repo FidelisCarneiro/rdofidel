@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de RDOs - RDO Fidel</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">RDO</div>
+            <h2>RDO Fidel</h2>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">Cadastros</div>
+                <a href="../cadastros/obras.html" class="nav-item">
+                    <span class="nav-icon">🏗️</span>
+                    <span class="nav-text">Obras</span>
+                </a>
+                <a href="../cadastros/colaboradores.html" class="nav-item">
+                    <span class="nav-icon">👷</span>
+                    <span class="nav-text">Colaboradores</span>
+                </a>
+                <a href="../cadastros/equipes.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">Equipes</span>
+                </a>
+                <a href="../cadastros/equipamentos.html" class="nav-item">
+                    <span class="nav-icon">🚜</span>
+                    <span class="nav-text">Equipamentos</span>
+                </a>
+                <a href="../cadastros/atividades.html" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Atividades</span>
+                </a>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">RDO</div>
+                <a href="novo-rdo.html" class="nav-item">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Novo RDO</span>
+                </a>
+                <a href="lista-rdos.html" class="nav-item active">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Listar RDOs</span>
+                </a>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="btn btn-outline btn-block" id="btn-logout">
+                <span>🚪</span> Sair
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h1>Lista de RDOs</h1>
+            </div>
+            
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="window.location.href='novo-rdo.html'">
+                    ➕ Novo RDO
+                </button>
+            </div>
+        </header>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Alertas -->
+            <div id="alert-container"></div>
+            
+            <!-- Filtros e Busca -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="filters-row">
+                        <div class="filter-item" style="flex: 1;">
+                            <input 
+                                type="text" 
+                                id="search-rdos" 
+                                class="form-control" 
+                                placeholder="🔍 Buscar por número RDO..."
+                            >
+                        </div>
+                        
+                        <div class="filter-item">
+                            <select id="filter-obra" class="form-control">
+                                <option value="">Todas as obras</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-item">
+                            <label for="filter-data-inicio" class="form-label" style="margin-bottom: 5px; font-size: 0.85rem;">
+                                Data Início
+                            </label>
+                            <input 
+                                type="date" 
+                                id="filter-data-inicio" 
+                                class="form-control"
+                            >
+                        </div>
+                        
+                        <div class="filter-item">
+                            <label for="filter-data-fim" class="form-label" style="margin-bottom: 5px; font-size: 0.85rem;">
+                                Data Fim
+                            </label>
+                            <input 
+                                type="date" 
+                                id="filter-data-fim" 
+                                class="form-control"
+                            >
+                        </div>
+                        
+                        <div class="filter-item">
+                            <button class="btn btn-primary" id="btn-aplicar-filtros" style="margin-top: 22px;">
+                                Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPIs Resumo -->
+            <div class="kpi-grid mb-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: var(--azul-cerúleo);">📄</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Total de RDOs</div>
+                        <div class="kpi-value" id="kpi-total-rdos">0</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: var(--success);">👷</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Total Colaboradores</div>
+                        <div class="kpi-value" id="kpi-total-colaboradores">0</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: var(--laranja);">⏰</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Total HH</div>
+                        <div class="kpi-value" id="kpi-total-hh">0</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: var(--vermelho);">🚜</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Equipamentos Usados</div>
+                        <div class="kpi-value" id="kpi-total-equipamentos">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de RDOs -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>RDOs Encontrados (<span id="total-rdos">0</span>)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nº RDO</th>
+                                    <th>Obra</th>
+                                    <th>Data</th>
+                                    <th>Dia Semana</th>
+                                    <th>Colaboradores</th>
+                                    <th>Total HH</th>
+                                    <th>Atividades</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rdos-tbody">
+                                <tr>
+                                    <td colspan="8" class="text-center">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Visualizar RDO -->
+    <div class="modal" id="modal-visualizar-rdo">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-rdo-titulo">Detalhes do RDO</h2>
+                    <button class="modal-close" id="btn-close-modal">&times;</button>
+                </div>
+                
+                <div class="modal-body" id="modal-rdo-conteudo">
+                    <!-- Conteúdo será preenchido dinamicamente -->
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-fechar-visualizar">
+                        Fechar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="btn-deletar-rdo">
+                        🗑️ Deletar RDO
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="../../js/config.js"></script>
+    <script src="../../js/database.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="lista-rdos.js"></script>
+</body>
+</html>

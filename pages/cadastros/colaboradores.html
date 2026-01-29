@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Colaboradores - RDO Fidel</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">RDO</div>
+            <h2>RDO Fidel</h2>
+            <button class="sidebar-toggle" id="sidebar-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">Cadastros</div>
+                <a href="obras.html" class="nav-item">
+                    <span class="nav-icon">🏗️</span>
+                    <span class="nav-text">Obras</span>
+                </a>
+                <a href="colaboradores.html" class="nav-item active">
+                    <span class="nav-icon">👷</span>
+                    <span class="nav-text">Colaboradores</span>
+                </a>
+                <a href="equipes.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">Equipes</span>
+                </a>
+                <a href="equipamentos.html" class="nav-item">
+                    <span class="nav-icon">🚜</span>
+                    <span class="nav-text">Equipamentos</span>
+                </a>
+                <a href="atividades.html" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Atividades</span>
+                </a>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">RDO</div>
+                <a href="../rdo/novo-rdo.html" class="nav-item">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Novo RDO</span>
+                </a>
+                <a href="../rdo/lista-rdos.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Listar RDOs</span>
+                </a>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="btn btn-outline btn-block" id="btn-logout">
+                <span>🚪</span> Sair
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h1>Cadastro de Colaboradores</h1>
+            </div>
+            
+            <div class="header-right">
+                <button class="btn btn-primary" id="btn-novo-colaborador">
+                    ➕ Novo Colaborador
+                </button>
+            </div>
+        </header>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Alertas -->
+            <div id="alert-container"></div>
+            
+            <!-- Filtros e Busca -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="filters-row">
+                        <div class="filter-item" style="flex: 1;">
+                            <input 
+                                type="text" 
+                                id="search-colaboradores" 
+                                class="form-control" 
+                                placeholder="🔍 Buscar por nome, função ou CPF..."
+                            >
+                        </div>
+                        <div class="filter-item">
+                            <select id="filter-contratada" class="form-control">
+                                <option value="">Todas as contratadas</option>
+                                <option value="proprio">Próprios</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <select id="filter-status" class="form-control">
+                                <option value="">Todos os status</option>
+                                <option value="ativo">Ativos</option>
+                                <option value="inativo">Inativos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de Colaboradores -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Colaboradores Cadastrados (<span id="total-colaboradores">0</span>)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Função</th>
+                                    <th>CPF</th>
+                                    <th>Telefone</th>
+                                    <th>Contratada</th>
+                                    <th>NFC ID</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="colaboradores-tbody">
+                                <tr>
+                                    <td colspan="8" class="text-center">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Novo/Editar Colaborador -->
+    <div class="modal" id="modal-colaborador">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Novo Colaborador</h2>
+                    <button class="modal-close" id="btn-close-modal">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <form id="form-colaborador">
+                        <input type="hidden" id="colaborador-id">
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-nome" class="form-label">
+                                    Nome Completo <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="colaborador-nome" 
+                                    class="form-control" 
+                                    required
+                                    placeholder="Nome completo do colaborador"
+                                >
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-funcao" class="form-label">
+                                    Função <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="colaborador-funcao" 
+                                    class="form-control" 
+                                    required
+                                    placeholder="Ex: Pedreiro, Eletricista, Encarregado"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-cpf" class="form-label">
+                                    CPF <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="colaborador-cpf" 
+                                    class="form-control" 
+                                    required
+                                    placeholder="000.000.000-00"
+                                    maxlength="14"
+                                >
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-telefone" class="form-label">
+                                    Telefone
+                                </label>
+                                <input 
+                                    type="tel" 
+                                    id="colaborador-telefone" 
+                                    class="form-control"
+                                    placeholder="(00) 00000-0000"
+                                    maxlength="15"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-contratada" class="form-label">
+                                    Contratada
+                                </label>
+                                <select id="colaborador-contratada" class="form-control">
+                                    <option value="">Colaborador Próprio</option>
+                                </select>
+                                <small class="form-text">Deixe vazio se for colaborador próprio</small>
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-nfc-id" class="form-label">
+                                    NFC ID
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="colaborador-nfc-id" 
+                                    class="form-control"
+                                    placeholder="ID do cartão NFC"
+                                >
+                                <small class="form-text">Para reconhecimento de presença</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-email" class="form-label">
+                                    E-mail
+                                </label>
+                                <input 
+                                    type="email" 
+                                    id="colaborador-email" 
+                                    class="form-control"
+                                    placeholder="email@exemplo.com"
+                                >
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="colaborador-ativo" class="form-label">
+                                    Status
+                                </label>
+                                <select id="colaborador-ativo" class="form-control">
+                                    <option value="true">Ativo</option>
+                                    <option value="false">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="colaborador-observacoes" class="form-label">
+                                Observações
+                            </label>
+                            <textarea 
+                                id="colaborador-observacoes" 
+                                class="form-control" 
+                                rows="3"
+                                placeholder="Informações adicionais sobre o colaborador..."
+                            ></textarea>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel">
+                        Cancelar
+                    </button>
+                    <button type="submit" form="form-colaborador" class="btn btn-primary" id="btn-salvar">
+                        💾 Salvar Colaborador
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="../../js/config.js"></script>
+    <script src="../../js/database.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="colaboradores.js"></script>
+</body>
+</html>
