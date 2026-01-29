@@ -1,5 +1,5 @@
 /* ============================================================================
-   LOGIN.JS - Lógica da página de login (CORRIGIDO)
+   LOGIN.JS - Lógica da página de login
    ============================================================================ */
 
 // Elementos do DOM
@@ -17,8 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Se já estiver autenticado, redirecionar para dashboard
     const session = await AUTH.checkAuth();
     if (session) {
-        console.log('✅ Já autenticado, redirecionando...');
-        window.location.href = 'dashboard.html'; // ✅ CORRIGIDO!
+        window.location.href = '../pages/dashboard.html';
     }
 });
 
@@ -82,7 +81,7 @@ loginForm.addEventListener('submit', async (e) => {
         
         // Redirecionar para dashboard após 1 segundo
         setTimeout(() => {
-            window.location.href = 'dashboard.html'; // ✅ CORRIGIDO!
+            window.location.href = '../pages/dashboard.html';
         }, 1000);
         
     } catch (error) {
@@ -167,7 +166,7 @@ signupForm.addEventListener('submit', async (e) => {
         // Fazer login automaticamente
         setTimeout(async () => {
             await AUTH.login(email, password);
-            window.location.href = 'dashboard.html'; // ✅ CORRIGIDO!
+            window.location.href = '../pages/dashboard.html';
         }, 1500);
         
     } catch (error) {
@@ -218,4 +217,4 @@ forgotPasswordLink.addEventListener('click', async (e) => {
     }
 });
 
-console.log('✅ Login.js carregado (versão corrigida)');
+console.log('✅ Login.js carregado');
