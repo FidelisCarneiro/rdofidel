@@ -1,0 +1,692 @@
+/* ============================================================================
+   RDO FIDEL - ESTILOS PRINCIPAIS
+   ============================================================================ */
+
+/* Reset CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ============================================================================
+   VARIÁVEIS DE COR (Paleta da Empresa)
+   ============================================================================ */
+:root {
+    /* Cores Primárias */
+    --cinza-chumbo: #4D4F53;
+    --vermelho: #C8102E;
+    --cinza-prata: #BBBCBC;
+    
+    /* Cores Complementares */
+    --azul-egeu: #00617F;
+    --azul-egeu-trama: #6599AE;
+    --azul-cerúleo: #0086BF;
+    --azul-cerúleo-trama: #31B1D9;
+    --cinza-escuro: #333F48;
+    --cinza-escuro-trama: #798189;
+    --laranja: #FF6A13;
+    --laranja-trama: #FFA770;
+    
+    /* Cores de Status */
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --info: #17a2b8;
+    
+    /* Neutros */
+    --branco: #FFFFFF;
+    --preto: #000000;
+    --cinza-claro: #f8f9fa;
+    --cinza-medio: #dee2e6;
+    
+    /* Sombras */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.15);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,0.2);
+    
+    /* Transições */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}
+
+/* ============================================================================
+   ESTILOS GLOBAIS
+   ============================================================================ */
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--cinza-claro);
+    color: var(--cinza-escuro);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ============================================================================
+   LOADING
+   ============================================================================ */
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--branco);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading.hidden {
+    display: none;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--cinza-prata);
+    border-top-color: var(--vermelho);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading p {
+    margin-top: 20px;
+    color: var(--cinza-chumbo);
+    font-size: 1.1rem;
+}
+
+/* ============================================================================
+   CONTAINER
+   ============================================================================ */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.container-fluid {
+    width: 100%;
+    padding: 20px;
+}
+
+/* ============================================================================
+   TELA DE LOGIN
+   ============================================================================ */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--azul-egeu) 0%, var(--azul-cerúleo) 100%);
+    padding: 20px;
+}
+
+.login-box {
+    background: var(--branco);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 450px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-logo {
+    width: 80px;
+    height: 80px;
+    background: var(--vermelho);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2rem;
+    color: var(--branco);
+    font-weight: bold;
+}
+
+.login-header h1 {
+    color: var(--cinza-chumbo);
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+
+.login-header p {
+    color: var(--cinza-prata);
+    font-size: 0.95rem;
+}
+
+/* ============================================================================
+   FORMULÁRIOS
+   ============================================================================ */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--cinza-escuro);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.form-label .required {
+    color: var(--vermelho);
+    margin-left: 2px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--cinza-medio);
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--azul-cerúleo);
+    box-shadow: 0 0 0 3px rgba(0, 134, 191, 0.1);
+}
+
+.form-control:disabled {
+    background-color: var(--cinza-claro);
+    cursor: not-allowed;
+}
+
+.form-control.error {
+    border-color: var(--danger);
+}
+
+.form-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: var(--cinza-prata);
+}
+
+.form-error {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: var(--danger);
+}
+
+/* Checkbox e Radio */
+.form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.form-check-input {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* ============================================================================
+   BOTÕES
+   ============================================================================ */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--vermelho);
+    color: var(--branco);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #a00d24;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: var(--cinza-prata);
+    color: var(--cinza-escuro);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #a8a9aa;
+}
+
+.btn-success {
+    background: var(--success);
+    color: var(--branco);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: var(--branco);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid var(--vermelho);
+    color: var(--vermelho);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: var(--vermelho);
+    color: var(--branco);
+}
+
+.btn-block {
+    width: 100%;
+    display: block;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.btn-lg {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+}
+
+/* ============================================================================
+   ALERTAS
+   ============================================================================ */
+.alert {
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: var(--success);
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border-color: var(--danger);
+    color: #721c24;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: var(--warning);
+    color: #856404;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: var(--info);
+    color: #0c5460;
+}
+
+.alert-dismissible {
+    position: relative;
+    padding-right: 45px;
+}
+
+.alert-close {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity var(--transition-fast);
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+/* ============================================================================
+   CARDS
+   ============================================================================ */
+.card {
+    background: var(--branco);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    padding: 15px 20px;
+    background: var(--cinza-claro);
+    border-bottom: 1px solid var(--cinza-medio);
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-footer {
+    padding: 15px 20px;
+    background: var(--cinza-claro);
+    border-top: 1px solid var(--cinza-medio);
+}
+
+/* ============================================================================
+   UTILITÁRIOS
+   ============================================================================ */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
+
+.p-1 { padding: 0.5rem; }
+.p-2 { padding: 1rem; }
+.p-3 { padding: 1.5rem; }
+.p-4 { padding: 2rem; }
+
+.hidden {
+    display: none !important;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.align-center {
+    align-items: center;
+}
+
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.gap-3 { gap: 1.5rem; }
+
+/* ============================================================================
+   LINKS
+   ============================================================================ */
+a {
+    color: var(--azul-cerúleo);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--azul-egeu);
+    text-decoration: underline;
+}
+
+/* ============================================================================
+   DIVIDER
+   ============================================================================ */
+.divider {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: var(--cinza-medio);
+}
+
+.divider span {
+    background: var(--branco);
+    padding: 0 15px;
+    position: relative;
+    color: var(--cinza-prata);
+    font-size: 0.9rem;
+}
+
+/* ============================================================================
+   MODAL
+   ============================================================================ */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-dialog {
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+}
+
+.modal-dialog.modal-lg {
+    max-width: 900px;
+}
+
+.modal-dialog.modal-sm {
+    max-width: 400px;
+}
+
+.modal-content {
+    background: var(--branco);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--cinza-medio);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h2,
+.modal-header h3 {
+    margin: 0;
+    color: var(--cinza-escuro);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--cinza-prata);
+    transition: color var(--transition-fast);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: var(--vermelho);
+}
+
+.modal-body {
+    padding: 25px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 20px 25px;
+    border-top: 1px solid var(--cinza-medio);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* ============================================================================
+   FORM LAYOUTS
+   ============================================================================ */
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 0;
+}
+
+.form-row > .form-group {
+    flex: 1;
+    margin-bottom: 20px;
+}
+
+.form-group.col-12 {
+    flex: 0 0 100%;
+}
+
+.form-group.col-md-6 {
+    flex: 0 0 calc(50% - 7.5px);
+}
+
+.form-group.col-md-4 {
+    flex: 0 0 calc(33.333% - 10px);
+}
+
+.form-group.col-md-3 {
+    flex: 0 0 calc(25% - 11.25px);
+}
+
+/* ============================================================================
+   BADGES
+   ============================================================================ */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.badge-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.badge-secondary {
+    background: var(--cinza-medio);
+    color: var(--cinza-escuro);
+}
+
+/* ============================================================================
+   RESPONSIVE - MODAL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .modal-dialog {
+        max-width: 100%;
+        margin: 0;
+    }
+    
+    .modal {
+        padding: 10px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-row > .form-group {
+        flex: 1;
+    }
+    
+    .form-group.col-md-6,
+    .form-group.col-md-4,
+    .form-group.col-md-3 {
+        flex: 1;
+    }
+}
