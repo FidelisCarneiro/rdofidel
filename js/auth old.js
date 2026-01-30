@@ -1,11 +1,6 @@
 /* ============================================================================
-   RDO FIDEL - AUTENTICAÇÃO (CORRIGIDO)
+   RDO FIDEL - AUTENTICAÇÃO
    ============================================================================ */
-
-// Aguardar o database.js carregar primeiro
-function getSupabase() {
-    return window.supabase || window.DB?.supabase;
-}
 
 /* ============================================================================
    FUNÇÕES DE AUTENTICAÇÃO
@@ -16,7 +11,6 @@ function getSupabase() {
  */
 async function login(email, password) {
     try {
-        const supabase = getSupabase();
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
@@ -45,7 +39,6 @@ async function login(email, password) {
  */
 async function signup(email, password, userData = {}) {
     try {
-        const supabase = getSupabase();
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -73,7 +66,6 @@ async function signup(email, password, userData = {}) {
  */
 async function logout() {
     try {
-        const supabase = getSupabase();
         const { error } = await supabase.auth.signOut();
         
         if (error) {
@@ -100,7 +92,6 @@ async function logout() {
  */
 async function checkAuth() {
     try {
-        const supabase = getSupabase();
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -112,7 +103,7 @@ async function checkAuth() {
             console.log('✅ Usuário autenticado:', session.user.email);
             return session;
         } else {
-            console.log('⚠️  Usuário não autenticado');
+            console.log('⚠️ Usuário não autenticado');
             return null;
         }
         
@@ -127,7 +118,6 @@ async function checkAuth() {
  */
 async function getCurrentUser() {
     try {
-        const supabase = getSupabase();
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (error) {
@@ -148,7 +138,6 @@ async function getCurrentUser() {
  */
 async function resetPassword(email) {
     try {
-        const supabase = getSupabase();
         const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/reset-password.html`
         });
@@ -172,7 +161,6 @@ async function resetPassword(email) {
  */
 async function updatePassword(newPassword) {
     try {
-        const supabase = getSupabase();
         const { data, error } = await supabase.auth.updateUser({
             password: newPassword
         });
@@ -251,7 +239,7 @@ async function requireAuth() {
     const session = await checkAuth();
     
     if (!session) {
-        console.log('⚠️  Acesso negado - redirecionando para login');
+        console.log('⚠️ Acesso negado - redirecionando para login');
         redirectTo('login');
         return false;
     }
@@ -297,39 +285,23 @@ function redirectTo(page) {
    LISTENER DE MUDANÇAS DE AUTH
    ============================================================================ */
 
-// Configurar listener quando o DOM carregar
-document.addEventListener('DOMContentLoaded', () => {
-    // Aguardar supabase estar disponível
-    const interval = setInterval(() => {
-        const supabase = getSupabase();
-        if (supabase) {
-            clearInterval(interval);
-            
-            // Escutar mudanças no estado de autenticação
-            supabase.auth.onAuthStateChange((event, session) => {
-                console.log('🔄 Auth state changed:', event);
-                
-                if (event === 'SIGNED_IN') {
-                    console.log('✅ Usuário logado');
-                    saveUserSession(session);
-                }
-                
-                if (event === 'SIGNED_OUT') {
-                    console.log('⚠️  Usuário deslogado');
-                    clearUserSession();
-                }
-                
-                if (event === 'TOKEN_REFRESHED') {
-                    console.log('🔄 Token atualizado');
-                }
-            });
-            
-            console.log('✅ Auth listener configurado');
-        }
-    }, 100);
+// Escutar mudanças no estado de autenticação
+supabase.auth.onAuthStateChange((event, session) => {
+    console.log('🔄 Auth state changed:', event);
     
-    // Timeout de 5 segundos
-    setTimeout(() => clearInterval(interval), 5000);
+    if (event === 'SIGNED_IN') {
+        console.log('✅ Usuário logado');
+        saveUserSession(session);
+    }
+    
+    if (event === 'SIGNED_OUT') {
+        console.log('⚠️ Usuário deslogado');
+        clearUserSession();
+    }
+    
+    if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token atualizado');
+    }
 });
 
 // Exportar funções
@@ -347,4 +319,4 @@ window.AUTH = {
     redirectTo
 };
 
-console.log('✅ Sistema de autenticação carregado (versão corrigida)');
+console.log('✅ Sistema de autenticação carregado');

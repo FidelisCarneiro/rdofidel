@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Atividades - RDO Fidel</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">RDO</div>
+            <h2>RDO Fidel</h2>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">CADASTROS</div>
+                <a href="obras.html" class="nav-item">
+                    <span class="nav-icon">🏗️</span>
+                    <span class="nav-text">Obras</span>
+                </a>
+                <a href="colaboradores.html" class="nav-item">
+                    <span class="nav-icon">👷</span>
+                    <span class="nav-text">Colaboradores</span>
+                </a>
+                <a href="equipes.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">Equipes</span>
+                </a>
+                <a href="equipamentos.html" class="nav-item">
+                    <span class="nav-icon">🚜</span>
+                    <span class="nav-text">Equipamentos</span>
+                </a>
+                <a href="atividades.html" class="nav-item active">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Atividades</span>
+                </a>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">RDO</div>
+                <a href="../rdo/novo-rdo.html" class="nav-item">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Novo RDO</span>
+                </a>
+                <a href="../rdo/lista-rdos.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Listar RDOs</span>
+                </a>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="btn btn-outline btn-block" id="btn-logout">
+                <span>🚪</span> Sair
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h1>Cadastro de Atividades</h1>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-info" id="user-info">
+                    <span class="user-avatar">👤</span>
+                    <span class="user-name" id="user-name">Carregando...</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Botão Nova Atividade -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" id="btn-nova-atividade">
+                    ➕ Nova Atividade
+                </button>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="filtro-busca">Buscar por nome ou código...</label>
+                            <input type="text" id="filtro-busca" class="form-control" placeholder="Digite para buscar...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="filtro-obra">Obra</label>
+                            <select id="filtro-obra" class="form-control">
+                                <option value="">Todas as obras</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="filtro-tipo">Tipo</label>
+                            <select id="filtro-tipo" class="form-control">
+                                <option value="">Todos os tipos</option>
+                                <option value="civil">Civil</option>
+                                <option value="eletrica">Elétrica</option>
+                                <option value="mecanica">Mecânica</option>
+                                <option value="hidraulica">Hidráulica</option>
+                                <option value="instrumentacao">Instrumentação</option>
+                                <option value="outras">Outras</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de Atividades -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Atividades Cadastradas</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="atividades-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nome da Atividade</th>
+                                    <th>Obra</th>
+                                    <th>Tipo</th>
+                                    <th>Unidade</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="atividades-tbody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center;">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Nova/Editar Atividade -->
+    <div class="modal" id="modal-atividade">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-titulo">Nova Atividade</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <form id="form-atividade">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="obra_id" class="form-label">Obra <span class="required">*</span></label>
+                                <select id="obra_id" class="form-control" required>
+                                    <option value="">Selecione a obra...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="codigo" class="form-label">Código da Atividade</label>
+                                <input type="text" id="codigo" class="form-control" placeholder="Ex: ATV-001">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nome" class="form-label">Nome da Atividade <span class="required">*</span></label>
+                            <input type="text" id="nome" class="form-control" required placeholder="Ex: Concretagem de laje">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="tipo" class="form-label">Tipo <span class="required">*</span></label>
+                                <select id="tipo" class="form-control" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="civil">Civil</option>
+                                    <option value="eletrica">Elétrica</option>
+                                    <option value="mecanica">Mecânica</option>
+                                    <option value="hidraulica">Hidráulica</option>
+                                    <option value="instrumentacao">Instrumentação</option>
+                                    <option value="outras">Outras</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="unidade_medida" class="form-label">Unidade de Medida</label>
+                                <select id="unidade_medida" class="form-control">
+                                    <option value="">Selecione...</option>
+                                    <option value="m">Metro (m)</option>
+                                    <option value="m2">Metro quadrado (m²)</option>
+                                    <option value="m3">Metro cúbico (m³)</option>
+                                    <option value="kg">Quilograma (kg)</option>
+                                    <option value="t">Tonelada (t)</option>
+                                    <option value="un">Unidade (un)</option>
+                                    <option value="h">Hora (h)</option>
+                                    <option value="vb">Verba (vb)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="quantidade_prevista" class="form-label">Quantidade Prevista</label>
+                                <input type="number" id="quantidade_prevista" class="form-control" step="0.01">
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="prazo_dias" class="form-label">Prazo (dias)</label>
+                                <input type="number" id="prazo_dias" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea id="descricao" class="form-control" rows="3" placeholder="Detalhamento da atividade"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="ativo" class="form-check-input" checked>
+                                <label for="ativo" class="form-check-label">
+                                    Atividade Ativa
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
+                    <button type="submit" form="form-atividade" class="btn btn-primary" id="btn-salvar">Salvar Atividade</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="../../js/config.js"></script>
+    <script src="../../js/database.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="atividades.js"></script>
+</body>
+</html>

@@ -1,16 +1,12 @@
 /* ============================================================================
-   RDO FIDEL - DATABASE (Supabase) - CORRIGIDO
+   RDO FIDEL - DATABASE (Supabase)
    ============================================================================ */
 
 // Inicializar cliente Supabase
-// ⚠️ IMPORTANTE: Não use 'const supabase' porque o CDN já declarou!
-const supabaseClient = window.supabase.createClient(
+const supabase = window.supabase.createClient(
     SUPABASE_CONFIG.url,
     SUPABASE_CONFIG.anonKey
 );
-
-// Criar alias para manter compatibilidade com o código
-window.supabase = supabaseClient;
 
 console.log('✅ Supabase cliente inicializado');
 
@@ -27,7 +23,7 @@ console.log('✅ Supabase cliente inicializado');
  */
 async function fetchData(table, filters = {}, select = '*', options = {}) {
     try {
-        let query = supabaseClient.from(table).select(select);
+        let query = supabase.from(table).select(select);
         
         // Aplicar filtros
         Object.entries(filters).forEach(([key, value]) => {
@@ -75,7 +71,7 @@ async function fetchOne(table, filters = {}, select = '*') {
  */
 async function insertData(table, data) {
     try {
-        const { data: inserted, error } = await supabaseClient
+        const { data: inserted, error } = await supabase
             .from(table)
             .insert(data)
             .select();
@@ -99,7 +95,7 @@ async function insertData(table, data) {
  */
 async function updateData(table, id, updates) {
     try {
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from(table)
             .update(updates)
             .eq('id', id)
@@ -124,7 +120,7 @@ async function updateData(table, id, updates) {
  */
 async function deleteData(table, id) {
     try {
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from(table)
             .delete()
             .eq('id', id)
@@ -211,7 +207,7 @@ async function uploadFile(file, folder = 'anexos') {
     try {
         const fileName = `${folder}/${Date.now()}_${file.name}`;
         
-        const { data, error } = await supabaseClient.storage
+        const { data, error } = await supabase.storage
             .from(APP_CONFIG.storage.bucket)
             .upload(fileName, file);
         
@@ -221,7 +217,7 @@ async function uploadFile(file, folder = 'anexos') {
         }
         
         // Obter URL pública
-        const { data: urlData } = supabaseClient.storage
+        const { data: urlData } = supabase.storage
             .from(APP_CONFIG.storage.bucket)
             .getPublicUrl(fileName);
         
@@ -248,7 +244,7 @@ async function testarConexao() {
             console.log('✅ Conexão com banco OK! Obra encontrada:', obras[0].nome);
             return true;
         } else {
-            console.log('⚠️  Banco vazio ou sem permissão');
+            console.log('⚠️ Banco vazio ou sem permissão');
             return false;
         }
         
@@ -263,7 +259,7 @@ testarConexao();
 
 // Exportar funções
 window.DB = {
-    supabase: supabaseClient,
+    supabase,
     fetchData,
     fetchOne,
     insertData,
@@ -278,5 +274,3 @@ window.DB = {
     uploadFile,
     testarConexao
 };
-
-console.log('✅ Database.js carregado (versão corrigida)');

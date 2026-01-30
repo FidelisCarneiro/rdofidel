@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Equipes - RDO Fidel</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">RDO</div>
+            <h2>RDO Fidel</h2>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">CADASTROS</div>
+                <a href="obras.html" class="nav-item">
+                    <span class="nav-icon">🏗️</span>
+                    <span class="nav-text">Obras</span>
+                </a>
+                <a href="colaboradores.html" class="nav-item">
+                    <span class="nav-icon">👷</span>
+                    <span class="nav-text">Colaboradores</span>
+                </a>
+                <a href="equipes.html" class="nav-item active">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">Equipes</span>
+                </a>
+                <a href="equipamentos.html" class="nav-item">
+                    <span class="nav-icon">🚜</span>
+                    <span class="nav-text">Equipamentos</span>
+                </a>
+                <a href="atividades.html" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Atividades</span>
+                </a>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">RDO</div>
+                <a href="../rdo/novo-rdo.html" class="nav-item">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Novo RDO</span>
+                </a>
+                <a href="../rdo/lista-rdos.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Listar RDOs</span>
+                </a>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="btn btn-outline btn-block" id="btn-logout">
+                <span>🚪</span> Sair
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h1>Cadastro de Equipes</h1>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-info" id="user-info">
+                    <span class="user-avatar">👤</span>
+                    <span class="user-name" id="user-name">Carregando...</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Botão Nova Equipe -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" id="btn-nova-equipe">
+                    ➕ Nova Equipe
+                </button>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="filtro-obra">Obra</label>
+                            <select id="filtro-obra" class="form-control">
+                                <option value="">Todas as obras</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="filtro-busca">Buscar equipe...</label>
+                            <input type="text" id="filtro-busca" class="form-control" placeholder="Nome da equipe ou gestor...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de Equipes -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Equipes Cadastradas</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="equipes-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome da Equipe</th>
+                                    <th>Obra</th>
+                                    <th>Gestor</th>
+                                    <th>Telefone</th>
+                                    <th>Colaboradores</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="equipes-tbody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center;">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Nova/Editar Equipe -->
+    <div class="modal" id="modal-equipe">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-titulo">Nova Equipe</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <form id="form-equipe">
+                        <div class="form-group">
+                            <label for="obra_id" class="form-label">Obra <span class="required">*</span></label>
+                            <select id="obra_id" class="form-control" required>
+                                <option value="">Selecione uma obra...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nome" class="form-label">Nome da Equipe <span class="required">*</span></label>
+                            <input type="text" id="nome" class="form-control" placeholder="Ex: Equipe Elétrica 01" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="gestor" class="form-label">Gestor/Líder da Equipe <span class="required">*</span></label>
+                            <input type="text" id="gestor" class="form-control" placeholder="Nome do gestor" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="telefone_gestor" class="form-label">Telefone do Gestor</label>
+                            <input type="tel" id="telefone_gestor" class="form-control" placeholder="(00) 00000-0000">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="turno" class="form-label">Turno de Trabalho</label>
+                            <select id="turno" class="form-control">
+                                <option value="">Não especificado</option>
+                                <option value="diurno">Diurno</option>
+                                <option value="noturno">Noturno</option>
+                                <option value="misto">Misto</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="especialidade" class="form-label">Especialidade/Disciplina</label>
+                            <input type="text" id="especialidade" class="form-control" placeholder="Ex: Elétrica, Civil, Mecânica...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="ativo" class="form-check-input" checked>
+                                <label for="ativo" class="form-check-label">
+                                    Equipe ativa
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea id="observacoes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
+                    <button type="submit" form="form-equipe" class="btn btn-primary" id="btn-salvar">Salvar Equipe</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="../../js/config.js"></script>
+    <script src="../../js/database.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="equipes.js"></script>
+</body>
+</html>

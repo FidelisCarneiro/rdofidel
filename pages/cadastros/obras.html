@@ -7,9 +7,8 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="../../css/styles.css">
-    <link rel="stylesheet" href="../../css/responsive.css">
     <link rel="stylesheet" href="../../css/dashboard.css">
-    <link rel="stylesheet" href="../../css/cadastros.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
     
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -29,7 +28,7 @@
             </a>
             
             <div class="nav-group">
-                <div class="nav-group-title">Cadastros</div>
+                <div class="nav-group-title">CADASTROS</div>
                 <a href="obras.html" class="nav-item active">
                     <span class="nav-icon">🏗️</span>
                     <span class="nav-text">Obras</span>
@@ -86,32 +85,42 @@
             </div>
             
             <div class="header-right">
-                <button class="btn btn-primary" id="btn-nova-obra">
-                    ➕ Nova Obra
-                </button>
+                <div class="user-info" id="user-info">
+                    <span class="user-avatar">👤</span>
+                    <span class="user-name" id="user-name">Carregando...</span>
+                </div>
             </div>
         </header>
         
         <!-- Content -->
         <div class="content">
+            <!-- Botão Nova Obra -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" id="btn-nova-obra">
+                    ➕ Nova Obra
+                </button>
+            </div>
+            
             <!-- Filtros -->
-            <div class="filters-card">
-                <div class="filters-row">
-                    <div class="filter-item" style="flex: 1;">
-                        <input 
-                            type="text" 
-                            id="search-obras" 
-                            class="form-control" 
-                            placeholder="🔍 Buscar por nome, gestor ou contrato..."
-                        >
-                    </div>
-                    
-                    <div class="filter-item">
-                        <select id="filter-status" class="form-control">
-                            <option value="">Todos os status</option>
-                            <option value="ativo">Ativas</option>
-                            <option value="inativo">Inativas</option>
-                        </select>
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="filtro-busca">Buscar por nome, gestor ou contrato...</label>
+                            <input type="text" id="filtro-busca" class="form-control" placeholder="Digite para buscar...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="filtro-status">Status</label>
+                            <select id="filtro-status" class="form-control">
+                                <option value="">Todos os status</option>
+                                <option value="planejamento">Planejamento</option>
+                                <option value="em_andamento">Em Andamento</option>
+                                <option value="paralisada">Paralisada</option>
+                                <option value="concluida">Concluída</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -131,14 +140,13 @@
                                     <th>Nº Contrato</th>
                                     <th>Data Início</th>
                                     <th>Previsão Término</th>
-                                    <th>Valor</th>
                                     <th>Status</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="obras-tbody">
                                 <tr>
-                                    <td colspan="8" class="text-center">Carregando...</td>
+                                    <td colspan="7" style="text-align: center;">Carregando...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -150,202 +158,159 @@
     
     <!-- Modal Nova/Editar Obra -->
     <div class="modal" id="modal-obra">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 id="modal-title">Nova Obra</h3>
-                    <button class="modal-close" id="btn-close-modal">&times;</button>
+                    <h2 id="modal-titulo">Nova Obra</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
                 </div>
                 
                 <div class="modal-body">
                     <form id="form-obra">
-                        <input type="hidden" id="obra-id">
-                        
                         <div class="form-row">
-                            <div class="form-group" style="flex: 2;">
-                                <label for="obra-nome" class="form-label">
-                                    Nome da Obra <span class="required">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="obra-nome" 
-                                    class="form-control" 
-                                    required
-                                >
+                            <div class="form-group col-md-6">
+                                <label for="nome" class="form-label">Nome da Obra <span class="required">*</span></label>
+                                <input type="text" id="nome" class="form-control" required>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="obra-numero-contrato" class="form-label">
-                                    Nº do Contrato
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="obra-numero-contrato" 
-                                    class="form-control"
-                                >
+                            <div class="form-group col-md-6">
+                                <label for="numero_contrato" class="form-label">Número do Contrato</label>
+                                <input type="text" id="numero_contrato" class="form-control">
                             </div>
                         </div>
                         
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="obra-gestor" class="form-label">
-                                    Gestor <span class="required">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="obra-gestor" 
-                                    class="form-control" 
-                                    required
-                                >
+                            <div class="form-group col-md-6">
+                                <label for="cliente" class="form-label">Cliente <span class="required">*</span></label>
+                                <input type="text" id="cliente" class="form-control" required>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="obra-responsavel-tecnico" class="form-label">
-                                    Responsável Técnico
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="obra-responsavel-tecnico" 
-                                    class="form-control"
-                                >
+                            <div class="form-group col-md-6">
+                                <label for="contratante" class="form-label">Contratante</label>
+                                <input type="text" id="contratante" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label for="gestor_obra" class="form-label">Gestor da Obra <span class="required">*</span></label>
+                                <input type="text" id="gestor_obra" class="form-control" required>
+                            </div>
+                            
+                            <div class="form-group col-md-4">
+                                <label for="email_gestor" class="form-label">Email do Gestor</label>
+                                <input type="email" id="email_gestor" class="form-control">
+                            </div>
+                            
+                            <div class="form-group col-md-4">
+                                <label for="telefone_gestor" class="form-label">Telefone do Gestor</label>
+                                <input type="tel" id="telefone_gestor" class="form-control">
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="obra-escopo" class="form-label">
-                                Escopo
-                            </label>
-                            <textarea 
-                                id="obra-escopo" 
-                                class="form-control" 
-                                rows="3"
-                            ></textarea>
+                            <label for="endereco" class="form-label">Endereço</label>
+                            <input type="text" id="endereco" class="form-control">
                         </div>
                         
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="obra-data-assinatura" class="form-label">
-                                    Data Assinatura
-                                </label>
-                                <input 
-                                    type="date" 
-                                    id="obra-data-assinatura" 
-                                    class="form-control"
-                                >
+                            <div class="form-group col-md-4">
+                                <label for="cidade" class="form-label">Cidade</label>
+                                <input type="text" id="cidade" class="form-control">
                             </div>
                             
-                            <div class="form-group">
-                                <label for="obra-data-inicio" class="form-label">
-                                    Data Início <span class="required">*</span>
-                                </label>
-                                <input 
-                                    type="date" 
-                                    id="obra-data-inicio" 
-                                    class="form-control"
-                                    required
-                                >
+                            <div class="form-group col-md-4">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select id="estado" class="form-control">
+                                    <option value="">Selecione...</option>
+                                    <option value="AC">AC</option>
+                                    <option value="AL">AL</option>
+                                    <option value="AP">AP</option>
+                                    <option value="AM">AM</option>
+                                    <option value="BA">BA</option>
+                                    <option value="CE">CE</option>
+                                    <option value="DF">DF</option>
+                                    <option value="ES">ES</option>
+                                    <option value="GO">GO</option>
+                                    <option value="MA">MA</option>
+                                    <option value="MT">MT</option>
+                                    <option value="MS">MS</option>
+                                    <option value="MG">MG</option>
+                                    <option value="PA">PA</option>
+                                    <option value="PB">PB</option>
+                                    <option value="PR">PR</option>
+                                    <option value="PE">PE</option>
+                                    <option value="PI">PI</option>
+                                    <option value="RJ">RJ</option>
+                                    <option value="RN">RN</option>
+                                    <option value="RS">RS</option>
+                                    <option value="RO">RO</option>
+                                    <option value="RR">RR</option>
+                                    <option value="SC">SC</option>
+                                    <option value="SP">SP</option>
+                                    <option value="SE">SE</option>
+                                    <option value="TO">TO</option>
+                                </select>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="obra-data-previsao" class="form-label">
-                                    Previsão Conclusão
-                                </label>
-                                <input 
-                                    type="date" 
-                                    id="obra-data-previsao" 
-                                    class="form-control"
-                                >
+                            <div class="form-group col-md-4">
+                                <label for="cep" class="form-label">CEP</label>
+                                <input type="text" id="cep" class="form-control" placeholder="00000-000">
                             </div>
                         </div>
                         
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="obra-valor" class="form-label">
-                                    Valor do Contrato (R$)
-                                </label>
-                                <input 
-                                    type="number" 
-                                    id="obra-valor" 
-                                    class="form-control"
-                                    step="0.01"
-                                    min="0"
-                                >
+                            <div class="form-group col-md-4">
+                                <label for="data_inicio" class="form-label">Data de Início <span class="required">*</span></label>
+                                <input type="date" id="data_inicio" class="form-control" required>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="obra-numero-art" class="form-label">
-                                    Número da ART
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="obra-numero-art" 
-                                    class="form-control"
-                                >
+                            <div class="form-group col-md-4">
+                                <label for="data_conclusao_prevista" class="form-label">Previsão de Término</label>
+                                <input type="date" id="data_conclusao_prevista" class="form-control">
                             </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="obra-endereco" class="form-label">
-                                Endereço
-                            </label>
-                            <textarea 
-                                id="obra-endereco" 
-                                class="form-control" 
-                                rows="2"
-                            ></textarea>
+                            
+                            <div class="form-group col-md-4">
+                                <label for="valor_contrato" class="form-label">Valor do Contrato (R$)</label>
+                                <input type="number" id="valor_contrato" class="form-control" step="0.01">
+                            </div>
                         </div>
                         
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="obra-latitude" class="form-label">
-                                    Latitude
-                                </label>
-                                <input 
-                                    type="number" 
-                                    id="obra-latitude" 
-                                    class="form-control"
-                                    step="0.0000001"
-                                    placeholder="-22.9068"
-                                >
+                            <div class="form-group col-md-6">
+                                <label for="status" class="form-label">Status <span class="required">*</span></label>
+                                <select id="status" class="form-control" required>
+                                    <option value="planejamento">Planejamento</option>
+                                    <option value="em_andamento">Em Andamento</option>
+                                    <option value="paralisada">Paralisada</option>
+                                    <option value="concluida">Concluída</option>
+                                    <option value="cancelada">Cancelada</option>
+                                </select>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="obra-longitude" class="form-label">
-                                    Longitude
-                                </label>
-                                <input 
-                                    type="number" 
-                                    id="obra-longitude" 
-                                    class="form-control"
-                                    step="0.0000001"
-                                    placeholder="-43.1729"
-                                >
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input 
-                                    type="checkbox" 
-                                    id="obra-ativo" 
-                                    class="form-check-input"
-                                    checked
-                                >
-                                <label for="obra-ativo" class="form-check-label">
+                            <div class="form-group col-md-6">
+                                <label for="ativo" class="form-check-label" style="display: block; margin-bottom: 8px;">
                                     Obra Ativa
                                 </label>
+                                <div class="form-check">
+                                    <input type="checkbox" id="ativo" class="form-check-input" checked>
+                                    <label for="ativo" class="form-check-label">
+                                        Sim, esta obra está ativa
+                                    </label>
+                                </div>
                             </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea id="observacoes" class="form-control" rows="3"></textarea>
                         </div>
                     </form>
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="btn-cancel-modal">
-                        Cancelar
-                    </button>
-                    <button type="submit" form="form-obra" class="btn btn-primary" id="btn-save-obra">
-                        Salvar Obra
-                    </button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
+                    <button type="submit" form="form-obra" class="btn btn-primary" id="btn-salvar">Salvar Obra</button>
                 </div>
             </div>
         </div>

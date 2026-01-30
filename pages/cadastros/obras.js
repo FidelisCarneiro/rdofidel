@@ -1,53 +1,85 @@
 /* ============================================================================
-   OBRAS.JS - Cadastro de Obras (CRUD Completo)
+   CADASTRO DE OBRAS - JavaScript
    ============================================================================ */
 
-// Variáveis globais
 let obras = [];
-let obrasFiltradas = [];
 let obraEditando = null;
 
-// Verificar autenticação e carregar dados
+// Verificar autenticação e carregar
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🏗️ Cadastro de Obras carregando...');
+    console.log('📋 Cadastro de Obras carregando...');
     
-    // Verificar autenticação
+    // Verificar auth
     const session = await AUTH.checkAuth();
     if (!session) {
         window.location.href = '../login.html';
         return;
     }
     
-    // Configurar event listeners
-    setupEventListeners();
+    // Mostrar nome do usuário
+    const userName = document.getElementById('user-name');
+    if (userName) {
+        userName.textContent = session.user.email.split('@')[0];
+    }
     
-    // Carregar obras
-    await loadObras();
+    // Setup
+    setupEventListeners();
+    await carregarObras();
     
     console.log('✅ Cadastro de Obras carregado!');
 });
 
 /* ============================================================================
+   EVENT LISTENERS
+   ============================================================================ */
+function setupEventListeners() {
+    // Logout
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+        if (confirm('Deseja realmente sair?')) {
+            await AUTH.logout();
+        }
+    });
+    
+    // Mobile menu
+    document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar')?.classList.toggle('mobile-open');
+    });
+    
+    // Nova obra
+    document.getElementById('btn-nova-obra')?.addEventListener('click', abrirModalNova);
+    
+    // Modal
+    document.getElementById('modal-close')?.addEventListener('click', fecharModal);
+    document.getElementById('btn-cancelar')?.addEventListener('click', fecharModal);
+    
+    // Form
+    document.getElementById('form-obra')?.addEventListener('submit', salvarObra);
+    
+    // Filtros
+    document.getElementById('filtro-busca')?.addEventListener('input', filtrarObras);
+    document.getElementById('filtro-status')?.addEventListener('change', filtrarObras);
+}
+
+/* ============================================================================
    CARREGAR OBRAS
    ============================================================================ */
-async function loadObras() {
+async function carregarObras() {
     try {
         UTILS.showLoading();
         
         obras = await DB.fetchData('obras', {}, '*', {
-            order: { column: 'nome', ascending: true }
+            order: { column: 'created_at', ascending: false }
         });
-        
-        obrasFiltradas = obras;
         
         console.log(`✅ ${obras.length} obras carregadas`);
         
-        renderObras();
+        renderizarTabela(obras);
+        
+        UTILS.hideLoading();
         
     } catch (error) {
         console.error('Erro ao carregar obras:', error);
-        UTILS.showError('Erro ao carregar obras', '#alert-container');
-    } finally {
+        UTILS.showError('Erro ao carregar obras');
         UTILS.hideLoading();
     }
 }
@@ -55,54 +87,47 @@ async function loadObras() {
 /* ============================================================================
    RENDERIZAR TABELA
    ============================================================================ */
-function renderObras() {
+function renderizarTabela(dadosFiltrados) {
     const tbody = document.getElementById('obras-tbody');
-    const totalObras = document.getElementById('total-obras');
-    
-    totalObras.textContent = obrasFiltradas.length;
-    
-    if (obrasFiltradas.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center">
-                    Nenhuma obra encontrada.
-                    <button class="btn btn-primary btn-sm mt-2" onclick="abrirModal()">
-                        ➕ Cadastrar primeira obra
-                    </button>
-                </td>
-            </tr>
-        `;
-        return;
-    }
+    if (!tbody) return;
     
     tbody.innerHTML = '';
     
-    obrasFiltradas.forEach(obra => {
+    if (dadosFiltrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhuma obra cadastrada</td></tr>';
+        return;
+    }
+    
+    dadosFiltrados.forEach(obra => {
         const tr = document.createElement('tr');
         
         // Status badge
-        const statusBadge = obra.ativo 
-            ? '<span class="badge badge-success">Ativo</span>'
-            : '<span class="badge badge-secondary">Inativo</span>';
+        const statusMap = {
+            'planejamento': 'badge-secondary',
+            'em_andamento': 'badge-warning',
+            'paralisada': 'badge-danger',
+            'concluida': 'badge-success',
+            'cancelada': 'badge-danger'
+        };
+        
+        const statusLabel = {
+            'planejamento': 'Planejamento',
+            'em_andamento': 'Em Andamento',
+            'paralisada': 'Paralisada',
+            'concluida': 'Concluída',
+            'cancelada': 'Cancelada'
+        };
         
         tr.innerHTML = `
-            <td>
-                <strong>${obra.nome}</strong>
-                ${obra.escopo ? `<br><small class="text-muted">${obra.escopo.substring(0, 50)}...</small>` : ''}
-            </td>
-            <td>${obra.gestor}</td>
+            <td><strong>${obra.nome}</strong></td>
+            <td>${obra.gestor_obra || '-'}</td>
             <td>${obra.numero_contrato || '-'}</td>
             <td>${UTILS.formatDateBR(obra.data_inicio)}</td>
-            <td>${obra.data_previsao_conclusao ? UTILS.formatDateBR(obra.data_previsao_conclusao) : '-'}</td>
-            <td>${obra.valor ? UTILS.formatCurrency(obra.valor) : '-'}</td>
-            <td>${statusBadge}</td>
+            <td>${obra.data_conclusao_prevista ? UTILS.formatDateBR(obra.data_conclusao_prevista) : '-'}</td>
+            <td><span class="badge ${statusMap[obra.status]}">${statusLabel[obra.status]}</span></td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editarObra('${obra.id}')" title="Editar">
-                    ✏️
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deletarObra('${obra.id}')" title="Deletar">
-                    🗑️
-                </button>
+                <button class="btn btn-sm btn-primary" onclick="editarObra('${obra.id}')">✏️ Editar</button>
+                <button class="btn btn-sm btn-danger" onclick="deletarObra('${obra.id}', '${obra.nome}')">🗑️ Excluir</button>
             </td>
         `;
         
@@ -111,167 +136,96 @@ function renderObras() {
 }
 
 /* ============================================================================
-   EVENT LISTENERS
+   FILTRAR OBRAS
    ============================================================================ */
-function setupEventListeners() {
-    // Logout
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-        if (confirm('Deseja realmente sair?')) {
-            await AUTH.logout();
-        }
-    });
+function filtrarObras() {
+    const busca = document.getElementById('filtro-busca')?.value.toLowerCase() || '';
+    const status = document.getElementById('filtro-status')?.value || '';
     
-    // Menu mobile
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-    const sidebar = document.getElementById('sidebar');
+    let filtradas = obras;
     
-    if (mobileMenuToggle) {
-        mobileMenuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('mobile-open');
-        });
+    // Filtro de busca
+    if (busca) {
+        filtradas = filtradas.filter(obra =>
+            obra.nome.toLowerCase().includes(busca) ||
+            (obra.gestor_obra && obra.gestor_obra.toLowerCase().includes(busca)) ||
+            (obra.numero_contrato && obra.numero_contrato.toLowerCase().includes(busca)) ||
+            (obra.cliente && obra.cliente.toLowerCase().includes(busca))
+        );
     }
     
-    // Nova obra
-    document.getElementById('btn-nova-obra').addEventListener('click', () => {
-        abrirModal();
-    });
-    
-    // Fechar modal
-    document.getElementById('btn-close-modal').addEventListener('click', () => {
-        fecharModal();
-    });
-    
-    document.getElementById('btn-cancel').addEventListener('click', () => {
-        fecharModal();
-    });
-    
-    // Fechar modal ao clicar fora
-    document.getElementById('modal-obra').addEventListener('click', (e) => {
-        if (e.target.id === 'modal-obra') {
-            fecharModal();
-        }
-    });
-    
-    // Submit form
-    document.getElementById('form-obra').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await salvarObra();
-    });
-    
-    // Busca
-    document.getElementById('search-obras').addEventListener('input', (e) => {
-        filtrarObras(e.target.value);
-    });
-    
     // Filtro de status
-    document.getElementById('filter-status').addEventListener('change', (e) => {
-        filtrarPorStatus(e.target.value);
-    });
+    if (status) {
+        filtradas = filtradas.filter(obra => obra.status === status);
+    }
+    
+    renderizarTabela(filtradas);
 }
 
 /* ============================================================================
    MODAL
    ============================================================================ */
-function abrirModal(obra = null) {
-    const modal = document.getElementById('modal-obra');
-    const modalTitle = document.getElementById('modal-title');
-    const form = document.getElementById('form-obra');
-    
-    // Resetar form
-    form.reset();
-    
-    if (obra) {
-        // Modo edição
-        modalTitle.textContent = 'Editar Obra';
-        obraEditando = obra;
-        
-        // Preencher campos
-        document.getElementById('obra-id').value = obra.id;
-        document.getElementById('obra-nome').value = obra.nome || '';
-        document.getElementById('obra-gestor').value = obra.gestor || '';
-        document.getElementById('obra-numero-contrato').value = obra.numero_contrato || '';
-        document.getElementById('obra-escopo').value = obra.escopo || '';
-        document.getElementById('obra-data-inicio').value = obra.data_inicio || '';
-        document.getElementById('obra-data-assinatura').value = obra.data_assinatura || '';
-        document.getElementById('obra-data-conclusao').value = obra.data_previsao_conclusao || '';
-        document.getElementById('obra-valor').value = obra.valor || '';
-        document.getElementById('obra-responsavel-tecnico').value = obra.responsavel_tecnico || '';
-        document.getElementById('obra-numero-art').value = obra.numero_art || '';
-        document.getElementById('obra-endereco').value = obra.endereco || '';
-        document.getElementById('obra-latitude').value = obra.latitude || '';
-        document.getElementById('obra-longitude').value = obra.longitude || '';
-        document.getElementById('obra-ativo').value = obra.ativo ? 'true' : 'false';
-        
-    } else {
-        // Modo criação
-        modalTitle.textContent = 'Nova Obra';
-        obraEditando = null;
-        document.getElementById('obra-ativo').value = 'true';
-    }
-    
-    // Mostrar modal
-    modal.classList.add('show');
-    document.body.style.overflow = 'hidden';
+function abrirModalNova() {
+    obraEditando = null;
+    document.getElementById('modal-titulo').textContent = 'Nova Obra';
+    document.getElementById('form-obra').reset();
+    document.getElementById('ativo').checked = true;
+    document.getElementById('status').value = 'planejamento';
+    document.getElementById('modal-obra').classList.add('show');
 }
 
 function fecharModal() {
-    const modal = document.getElementById('modal-obra');
-    modal.classList.remove('show');
-    document.body.style.overflow = '';
+    document.getElementById('modal-obra').classList.remove('show');
     obraEditando = null;
 }
 
 /* ============================================================================
    SALVAR OBRA
    ============================================================================ */
-async function salvarObra() {
+async function salvarObra(e) {
+    e.preventDefault();
+    
     try {
-        // Obter dados do form
         const dados = {
-            nome: document.getElementById('obra-nome').value.trim(),
-            gestor: document.getElementById('obra-gestor').value.trim(),
-            numero_contrato: document.getElementById('obra-numero-contrato').value.trim() || null,
-            escopo: document.getElementById('obra-escopo').value.trim() || null,
-            data_inicio: document.getElementById('obra-data-inicio').value || null,
-            data_assinatura: document.getElementById('obra-data-assinatura').value || null,
-            data_previsao_conclusao: document.getElementById('obra-data-conclusao').value || null,
-            valor: parseFloat(document.getElementById('obra-valor').value) || null,
-            responsavel_tecnico: document.getElementById('obra-responsavel-tecnico').value.trim() || null,
-            numero_art: document.getElementById('obra-numero-art').value.trim() || null,
-            endereco: document.getElementById('obra-endereco').value.trim() || null,
-            latitude: parseFloat(document.getElementById('obra-latitude').value) || null,
-            longitude: parseFloat(document.getElementById('obra-longitude').value) || null,
-            ativo: document.getElementById('obra-ativo').value === 'true'
+            nome: document.getElementById('nome').value,
+            numero_contrato: document.getElementById('numero_contrato').value || null,
+            cliente: document.getElementById('cliente').value,
+            contratante: document.getElementById('contratante').value || null,
+            gestor_obra: document.getElementById('gestor_obra').value,
+            email_gestor: document.getElementById('email_gestor').value || null,
+            telefone_gestor: document.getElementById('telefone_gestor').value || null,
+            endereco: document.getElementById('endereco').value || null,
+            cidade: document.getElementById('cidade').value || null,
+            estado: document.getElementById('estado').value || null,
+            cep: document.getElementById('cep').value || null,
+            data_inicio: document.getElementById('data_inicio').value,
+            data_conclusao_prevista: document.getElementById('data_conclusao_prevista').value || null,
+            valor_contrato: document.getElementById('valor_contrato').value || null,
+            status: document.getElementById('status').value,
+            ativo: document.getElementById('ativo').checked,
+            observacoes: document.getElementById('observacoes').value || null
         };
-        
-        // Validar
-        if (!dados.nome || !dados.gestor || !dados.data_inicio) {
-            UTILS.showError('Preencha todos os campos obrigatórios', '#alert-container');
-            return;
-        }
         
         UTILS.showLoading();
         
         if (obraEditando) {
             // Atualizar
-            await DB.updateData('obras', obraEditando.id, dados);
-            UTILS.showSuccess('Obra atualizada com sucesso!', '#alert-container');
+            await DB.updateData('obras', obraEditando, dados);
+            UTILS.showSuccess('Obra atualizada com sucesso!');
         } else {
             // Criar
             await DB.insertData('obras', dados);
-            UTILS.showSuccess('Obra cadastrada com sucesso!', '#alert-container');
+            UTILS.showSuccess('Obra cadastrada com sucesso!');
         }
         
-        // Recarregar lista
-        await loadObras();
-        
-        // Fechar modal
         fecharModal();
+        await carregarObras();
+        
+        UTILS.hideLoading();
         
     } catch (error) {
         console.error('Erro ao salvar obra:', error);
-        UTILS.showError('Erro ao salvar obra: ' + error.message, '#alert-container');
-    } finally {
+        UTILS.showError('Erro ao salvar obra');
         UTILS.hideLoading();
     }
 }
@@ -279,114 +233,77 @@ async function salvarObra() {
 /* ============================================================================
    EDITAR OBRA
    ============================================================================ */
-async function editarObra(obraId) {
+async function editarObra(id) {
     try {
-        const obra = obras.find(o => o.id === obraId);
+        UTILS.showLoading();
+        
+        const obra = await DB.fetchOne('obras', { id });
         
         if (!obra) {
             UTILS.showError('Obra não encontrada');
             return;
         }
         
-        abrirModal(obra);
+        obraEditando = id;
+        
+        // Preencher form
+        document.getElementById('nome').value = obra.nome;
+        document.getElementById('numero_contrato').value = obra.numero_contrato || '';
+        document.getElementById('cliente').value = obra.cliente;
+        document.getElementById('contratante').value = obra.contratante || '';
+        document.getElementById('gestor_obra').value = obra.gestor_obra;
+        document.getElementById('email_gestor').value = obra.email_gestor || '';
+        document.getElementById('telefone_gestor').value = obra.telefone_gestor || '';
+        document.getElementById('endereco').value = obra.endereco || '';
+        document.getElementById('cidade').value = obra.cidade || '';
+        document.getElementById('estado').value = obra.estado || '';
+        document.getElementById('cep').value = obra.cep || '';
+        document.getElementById('data_inicio').value = obra.data_inicio;
+        document.getElementById('data_conclusao_prevista').value = obra.data_conclusao_prevista || '';
+        document.getElementById('valor_contrato').value = obra.valor_contrato || '';
+        document.getElementById('status').value = obra.status;
+        document.getElementById('ativo').checked = obra.ativo;
+        document.getElementById('observacoes').value = obra.observacoes || '';
+        
+        document.getElementById('modal-titulo').textContent = 'Editar Obra';
+        document.getElementById('modal-obra').classList.add('show');
+        
+        UTILS.hideLoading();
         
     } catch (error) {
-        console.error('Erro ao editar obra:', error);
-        UTILS.showError('Erro ao carregar dados da obra');
+        console.error('Erro ao carregar obra:', error);
+        UTILS.showError('Erro ao carregar obra');
+        UTILS.hideLoading();
     }
 }
 
 /* ============================================================================
    DELETAR OBRA
    ============================================================================ */
-async function deletarObra(obraId) {
+async function deletarObra(id, nome) {
+    if (!confirm(`Deseja realmente excluir a obra "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        return;
+    }
+    
     try {
-        const obra = obras.find(o => o.id === obraId);
-        
-        if (!obra) {
-            UTILS.showError('Obra não encontrada');
-            return;
-        }
-        
-        const confirmacao = confirm(
-            `Tem certeza que deseja deletar a obra "${obra.nome}"?\n\n` +
-            `ATENÇÃO: Esta ação não pode ser desfeita!`
-        );
-        
-        if (!confirmacao) return;
-        
         UTILS.showLoading();
         
-        await DB.deleteData('obras', obraId);
+        await DB.deleteData('obras', id);
         
-        UTILS.showSuccess('Obra deletada com sucesso!', '#alert-container');
+        UTILS.showSuccess('Obra excluída com sucesso!');
+        await carregarObras();
         
-        // Recarregar lista
-        await loadObras();
+        UTILS.hideLoading();
         
     } catch (error) {
         console.error('Erro ao deletar obra:', error);
-        UTILS.showError('Erro ao deletar obra: ' + error.message, '#alert-container');
-    } finally {
+        UTILS.showError('Erro ao deletar obra');
         UTILS.hideLoading();
     }
-}
-
-/* ============================================================================
-   FILTROS
-   ============================================================================ */
-function filtrarObras(termo) {
-    termo = termo.toLowerCase().trim();
-    
-    if (!termo) {
-        obrasFiltradas = obras;
-    } else {
-        obrasFiltradas = obras.filter(obra => {
-            return (
-                obra.nome.toLowerCase().includes(termo) ||
-                obra.gestor.toLowerCase().includes(termo) ||
-                (obra.numero_contrato && obra.numero_contrato.toLowerCase().includes(termo))
-            );
-        });
-    }
-    
-    // Aplicar filtro de status também
-    const statusFiltro = document.getElementById('filter-status').value;
-    if (statusFiltro) {
-        filtrarPorStatus(statusFiltro);
-    } else {
-        renderObras();
-    }
-}
-
-function filtrarPorStatus(status) {
-    const termoBusca = document.getElementById('search-obras').value.toLowerCase().trim();
-    
-    // Começar com todas as obras ou obras já filtradas por busca
-    let obrasParaFiltrar = termoBusca 
-        ? obras.filter(obra => {
-            return (
-                obra.nome.toLowerCase().includes(termoBusca) ||
-                obra.gestor.toLowerCase().includes(termoBusca) ||
-                (obra.numero_contrato && obra.numero_contrato.toLowerCase().includes(termoBusca))
-            );
-        })
-        : obras;
-    
-    if (status === 'ativo') {
-        obrasFiltradas = obrasParaFiltrar.filter(obra => obra.ativo);
-    } else if (status === 'inativo') {
-        obrasFiltradas = obrasParaFiltrar.filter(obra => !obra.ativo);
-    } else {
-        obrasFiltradas = obrasParaFiltrar;
-    }
-    
-    renderObras();
 }
 
 // Exportar funções globais
 window.editarObra = editarObra;
 window.deletarObra = deletarObra;
-window.abrirModal = abrirModal;
 
 console.log('✅ Obras.js carregado');

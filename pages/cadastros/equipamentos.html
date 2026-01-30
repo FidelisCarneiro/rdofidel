@@ -7,11 +7,72 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="../../css/styles.css">
-    <link rel="stylesheet" href="../../css/responsive.css">
     <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
     
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        .photo-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .photo-upload-area:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .photo-upload-area.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .equipment-photo-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .photo-item-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar -->
@@ -28,7 +89,7 @@
             </a>
             
             <div class="nav-group">
-                <div class="nav-group-title">Cadastros</div>
+                <div class="nav-group-title">CADASTROS</div>
                 <a href="obras.html" class="nav-item">
                     <span class="nav-icon">🏗️</span>
                     <span class="nav-text">Obras</span>
@@ -85,41 +146,49 @@
             </div>
             
             <div class="header-right">
-                <button class="btn btn-primary" id="btn-novo-equipamento">
-                    ➕ Novo Equipamento
-                </button>
+                <div class="user-info" id="user-info">
+                    <span class="user-avatar">👤</span>
+                    <span class="user-name" id="user-name">Carregando...</span>
+                </div>
             </div>
         </header>
         
         <!-- Content -->
         <div class="content">
-            <!-- Alertas -->
-            <div id="alert-container"></div>
+            <!-- Botão Novo Equipamento -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" id="btn-novo-equipamento">
+                    ➕ Novo Equipamento
+                </button>
+            </div>
             
             <!-- Filtros -->
-            <div class="card mb-3">
+            <div class="card">
                 <div class="card-body">
-                    <div class="filters-row">
-                        <div class="filter-item" style="flex: 1;">
-                            <input 
-                                type="text" 
-                                id="search-equipamentos" 
-                                class="form-control" 
-                                placeholder="🔍 Buscar por nome, marca ou placa..."
-                            >
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="filtro-busca">Buscar por nome, código ou placa...</label>
+                            <input type="text" id="filtro-busca" class="form-control" placeholder="Digite para buscar...">
                         </div>
-                        <div class="filter-item">
-                            <select id="filter-tipo" class="form-control">
+                        
+                        <div class="form-group">
+                            <label for="filtro-tipo">Tipo</label>
+                            <select id="filtro-tipo" class="form-control">
                                 <option value="">Todos os tipos</option>
-                                <option value="proprio">Próprios</option>
-                                <option value="locado">Locados</option>
+                                <option value="pesado">Pesado</option>
+                                <option value="leve">Leve</option>
+                                <option value="ferramenta">Ferramenta</option>
                             </select>
                         </div>
-                        <div class="filter-item">
-                            <select id="filter-status" class="form-control">
-                                <option value="">Todos os status</option>
-                                <option value="ativo">Ativos</option>
-                                <option value="inativo">Inativos</option>
+                        
+                        <div class="form-group">
+                            <label for="filtro-status">Status</label>
+                            <select id="filtro-status" class="form-control">
+                                <option value="">Todos</option>
+                                <option value="disponivel">Disponível</option>
+                                <option value="em_uso">Em Uso</option>
+                                <option value="manutencao">Em Manutenção</option>
+                                <option value="inativo">Inativo</option>
                             </select>
                         </div>
                     </div>
@@ -129,26 +198,24 @@
             <!-- Tabela de Equipamentos -->
             <div class="card">
                 <div class="card-header">
-                    <h3>Equipamentos Cadastrados (<span id="total-equipamentos">0</span>)</h3>
+                    <h3>Equipamentos Cadastrados</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table" id="equipamentos-table">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>Marca/Modelo</th>
-                                    <th>Placa</th>
+                                    <th>Foto</th>
+                                    <th>Nome/Código</th>
                                     <th>Tipo</th>
-                                    <th>Aquisição</th>
-                                    <th>Valor Locação/h</th>
+                                    <th>Placa/Série</th>
                                     <th>Status</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="equipamentos-tbody">
                                 <tr>
-                                    <td colspan="8" class="text-center">Carregando...</td>
+                                    <td colspan="6" style="text-align: center;">Carregando...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -158,145 +225,112 @@
         </div>
     </div>
     
-    <!-- Modal -->
+    <!-- Modal Novo/Editar Equipamento -->
     <div class="modal" id="modal-equipamento">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 id="modal-title">Novo Equipamento</h2>
-                    <button class="modal-close" id="btn-close-modal">&times;</button>
+                    <h2 id="modal-titulo">Novo Equipamento</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
                 </div>
                 
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
                     <form id="form-equipamento">
-                        <input type="hidden" id="equipamento-id">
+                        <!-- Informações Básicas -->
+                        <h3>Informações Básicas</h3>
                         
                         <div class="form-row">
-                            <div class="form-group col-12">
-                                <label for="equipamento-nome" class="form-label">
-                                    Nome do Equipamento <span class="required">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="equipamento-nome" 
-                                    class="form-control" 
-                                    required
-                                    placeholder="Ex: Retroescavadeira CAT, Betoneira 400L"
-                                >
+                            <div class="form-group col-md-8">
+                                <label for="nome" class="form-label">Nome do Equipamento <span class="required">*</span></label>
+                                <input type="text" id="nome" class="form-control" required placeholder="Ex: Escavadeira Hidráulica">
+                            </div>
+                            
+                            <div class="form-group col-md-4">
+                                <label for="codigo" class="form-label">Código</label>
+                                <input type="text" id="codigo" class="form-control" placeholder="Ex: EQ-001">
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group col-md-6">
-                                <label for="equipamento-marca" class="form-label">
-                                    Marca
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="equipamento-marca" 
-                                    class="form-control"
-                                    placeholder="Ex: Caterpillar, Komatsu"
-                                >
-                            </div>
-                            
-                            <div class="form-group col-md-6">
-                                <label for="equipamento-modelo" class="form-label">
-                                    Modelo
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="equipamento-modelo" 
-                                    class="form-control"
-                                    placeholder="Ex: 416F, PC200"
-                                >
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label for="equipamento-placa" class="form-label">
-                                    Placa
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="equipamento-placa" 
-                                    class="form-control"
-                                    placeholder="ABC-1234"
-                                    maxlength="8"
-                                >
-                            </div>
-                            
-                            <div class="form-group col-md-4">
-                                <label for="equipamento-tipo" class="form-label">
-                                    Tipo <span class="required">*</span>
-                                </label>
-                                <select id="equipamento-tipo" class="form-control" required>
+                                <label for="tipo" class="form-label">Tipo <span class="required">*</span></label>
+                                <select id="tipo" class="form-control" required>
                                     <option value="">Selecione...</option>
-                                    <option value="proprio">Próprio</option>
-                                    <option value="locado">Locado</option>
+                                    <option value="pesado">Equipamento Pesado</option>
+                                    <option value="leve">Equipamento Leve</option>
+                                    <option value="ferramenta">Ferramenta</option>
                                 </select>
                             </div>
                             
-                            <div class="form-group col-md-4">
-                                <label for="equipamento-data-aquisicao" class="form-label">
-                                    Data de Aquisição
-                                </label>
-                                <input 
-                                    type="date" 
-                                    id="equipamento-data-aquisicao" 
-                                    class="form-control"
-                                >
+                            <div class="form-group col-md-6">
+                                <label for="status" class="form-label">Status <span class="required">*</span></label>
+                                <select id="status" class="form-control" required>
+                                    <option value="disponivel">Disponível</option>
+                                    <option value="em_uso">Em Uso</option>
+                                    <option value="manutencao">Em Manutenção</option>
+                                    <option value="inativo">Inativo</option>
+                                </select>
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group col-md-6">
-                                <label for="equipamento-valor-locacao" class="form-label">
-                                    Valor Locação por Hora (R$)
-                                </label>
-                                <input 
-                                    type="number" 
-                                    id="equipamento-valor-locacao" 
-                                    class="form-control"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                >
-                                <small class="form-text">Preencha apenas se for equipamento locado</small>
+                                <label for="placa" class="form-label">Placa</label>
+                                <input type="text" id="placa" class="form-control" placeholder="ABC-1234">
                             </div>
                             
                             <div class="form-group col-md-6">
-                                <label for="equipamento-ativo" class="form-label">
-                                    Status
-                                </label>
-                                <select id="equipamento-ativo" class="form-control">
-                                    <option value="true">Ativo</option>
-                                    <option value="false">Inativo</option>
-                                </select>
+                                <label for="numero_serie" class="form-label">Número de Série</label>
+                                <input type="text" id="numero_serie" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="marca" class="form-label">Marca</label>
+                                <input type="text" id="marca" class="form-control" placeholder="Ex: Caterpillar">
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="modelo" class="form-label">Modelo</label>
+                                <input type="text" id="modelo" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="ano_fabricacao" class="form-label">Ano de Fabricação</label>
+                                <input type="number" id="ano_fabricacao" class="form-control" min="1900" max="2100">
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="proprietario" class="form-label">Proprietário</label>
+                                <input type="text" id="proprietario" class="form-control" placeholder="Próprio/Locado">
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="equipamento-observacoes" class="form-label">
-                                Observações
-                            </label>
-                            <textarea 
-                                id="equipamento-observacoes" 
-                                class="form-control" 
-                                rows="3"
-                                placeholder="Informações adicionais sobre o equipamento..."
-                            ></textarea>
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea id="descricao" class="form-control" rows="3"></textarea>
                         </div>
+                        
+                        <!-- Fotos do Equipamento -->
+                        <h3 style="margin-top: 30px;">📷 Fotos do Equipamento</h3>
+                        
+                        <div class="photo-upload-area" id="photo-upload-area">
+                            <input type="file" id="photo-input" accept="image/*" multiple style="display: none;">
+                            <p style="font-size: 48px; margin: 0;">📷</p>
+                            <p style="margin: 10px 0;">Clique ou arraste fotos aqui</p>
+                            <small>Formatos: JPG, PNG (max 5MB por foto)</small>
+                        </div>
+                        
+                        <div class="photos-grid" id="photos-grid"></div>
                     </form>
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="btn-cancel">
-                        Cancelar
-                    </button>
-                    <button type="submit" form="form-equipamento" class="btn btn-primary" id="btn-salvar">
-                        💾 Salvar Equipamento
-                    </button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
+                    <button type="submit" form="form-equipamento" class="btn btn-primary" id="btn-salvar">Salvar Equipamento</button>
                 </div>
             </div>
         </div>

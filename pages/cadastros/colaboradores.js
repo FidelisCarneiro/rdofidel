@@ -1,127 +1,126 @@
 /* ============================================================================
-   COLABORADORES.JS - Cadastro de Colaboradores (CRUD Completo)
+   CADASTRO DE COLABORADORES - JavaScript (Com Facial, NFC e Assinatura)
    ============================================================================ */
 
-// Variáveis globais
 let colaboradores = [];
-let colaboradoresFiltrados = [];
-let contratadas = [];
 let colaboradorEditando = null;
+let stream = null;
+let signaturePad = null;
 
-// Verificar autenticação e carregar dados
+// Verificar autenticação e carregar
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('👷 Cadastro de Colaboradores carregando...');
     
-    // Verificar autenticação
+    // Verificar auth
     const session = await AUTH.checkAuth();
     if (!session) {
         window.location.href = '../login.html';
         return;
     }
     
-    // Configurar máscaras
-    setupMasks();
+    // Mostrar nome do usuário
+    const userName = document.getElementById('user-name');
+    if (userName) {
+        userName.textContent = session.user.email.split('@')[0];
+    }
     
-    // Configurar event listeners
+    // Setup
     setupEventListeners();
-    
-    // Carregar contratadas
-    await loadContratadas();
-    
-    // Carregar colaboradores
-    await loadColaboradores();
+    setupTabs();
+    setupSignaturePad();
+    await carregarColaboradores();
     
     console.log('✅ Cadastro de Colaboradores carregado!');
 });
 
 /* ============================================================================
-   MÁSCARAS DE FORMATAÇÃO
+   EVENT LISTENERS
    ============================================================================ */
-function setupMasks() {
-    const cpfInput = document.getElementById('colaborador-cpf');
-    const telefoneInput = document.getElementById('colaborador-telefone');
-    
-    // Máscara CPF
-    cpfInput.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-        
-        if (value.length <= 11) {
-            value = value.replace(/(\d{3})(\d)/, '$1.$2');
-            value = value.replace(/(\d{3})(\d)/, '$1.$2');
-            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+function setupEventListeners() {
+    // Logout
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+        if (confirm('Deseja realmente sair?')) {
+            await AUTH.logout();
         }
-        
-        e.target.value = value;
     });
     
-    // Máscara Telefone
-    telefoneInput.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-        
-        if (value.length <= 11) {
-            value = value.replace(/(\d{2})(\d)/, '($1) $2');
-            value = value.replace(/(\d{5})(\d)/, '$1-$2');
-        }
-        
-        e.target.value = value;
+    // Mobile menu
+    document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar')?.classList.toggle('mobile-open');
     });
+    
+    // Novo colaborador
+    document.getElementById('btn-novo-colaborador')?.addEventListener('click', abrirModalNovo);
+    
+    // Modal
+    document.getElementById('modal-close')?.addEventListener('click', fecharModal);
+    document.getElementById('btn-cancelar')?.addEventListener('click', fecharModal);
+    
+    // Form
+    document.getElementById('form-colaborador')?.addEventListener('submit', salvarColaborador);
+    
+    // Filtros
+    document.getElementById('filtro-busca')?.addEventListener('input', filtrarColaboradores);
+    document.getElementById('filtro-funcao')?.addEventListener('change', filtrarColaboradores);
+    document.getElementById('filtro-ativo')?.addEventListener('change', filtrarColaboradores);
+    
+    // Câmera
+    document.getElementById('btn-iniciar-camera')?.addEventListener('click', iniciarCamera);
+    document.getElementById('btn-parar-camera')?.addEventListener('click', pararCamera);
+    document.getElementById('btn-capturar-foto')?.addEventListener('click', capturarFoto);
+    document.getElementById('btn-remover-foto')?.addEventListener('click', removerFoto);
+    
+    // NFC
+    document.getElementById('btn-ler-nfc')?.addEventListener('click', lerNFC);
+    
+    // Assinatura
+    document.getElementById('btn-salvar-assinatura')?.addEventListener('click', salvarAssinatura);
+    document.getElementById('btn-limpar-assinatura')?.addEventListener('click', limparAssinatura);
 }
 
 /* ============================================================================
-   CARREGAR CONTRATADAS
+   TABS
    ============================================================================ */
-async function loadContratadas() {
-    try {
-        contratadas = await DB.fetchData('contratadas', { ativo: true }, '*', {
-            order: { column: 'nome', ascending: true }
-        });
-        
-        // Preencher select
-        const select = document.getElementById('colaborador-contratada');
-        const filterSelect = document.getElementById('filter-contratada');
-        
-        contratadas.forEach(contratada => {
-            // Select do formulário
-            const option = document.createElement('option');
-            option.value = contratada.id;
-            option.textContent = contratada.nome;
-            select.appendChild(option);
+function setupTabs() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
             
-            // Select do filtro
-            const filterOption = document.createElement('option');
-            filterOption.value = contratada.id;
-            filterOption.textContent = contratada.nome;
-            filterSelect.appendChild(filterOption);
+            // Remover active de todos
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Adicionar active no clicado
+            button.classList.add('active');
+            document.querySelector(`.tab-content[data-tab="${tabName}"]`)?.classList.add('active');
         });
-        
-        console.log(`✅ ${contratadas.length} contratadas carregadas`);
-        
-    } catch (error) {
-        console.error('Erro ao carregar contratadas:', error);
-    }
+    });
 }
 
 /* ============================================================================
    CARREGAR COLABORADORES
    ============================================================================ */
-async function loadColaboradores() {
+async function carregarColaboradores() {
     try {
         UTILS.showLoading();
         
         colaboradores = await DB.fetchData('colaboradores', {}, '*', {
-            order: { column: 'nome', ascending: true }
+            order: { column: 'created_at', ascending: false }
         });
-        
-        colaboradoresFiltrados = colaboradores;
         
         console.log(`✅ ${colaboradores.length} colaboradores carregados`);
         
-        renderColaboradores();
+        renderizarTabela(colaboradores);
+        
+        UTILS.hideLoading();
         
     } catch (error) {
         console.error('Erro ao carregar colaboradores:', error);
-        UTILS.showError('Erro ao carregar colaboradores', '#alert-container');
-    } finally {
+        UTILS.showError('Erro ao carregar colaboradores');
         UTILS.hideLoading();
     }
 }
@@ -129,56 +128,48 @@ async function loadColaboradores() {
 /* ============================================================================
    RENDERIZAR TABELA
    ============================================================================ */
-function renderColaboradores() {
+function renderizarTabela(dadosFiltrados) {
     const tbody = document.getElementById('colaboradores-tbody');
-    const totalColaboradores = document.getElementById('total-colaboradores');
-    
-    totalColaboradores.textContent = colaboradoresFiltrados.length;
-    
-    if (colaboradoresFiltrados.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center">
-                    Nenhum colaborador encontrado.
-                    <button class="btn btn-primary btn-sm mt-2" onclick="abrirModal()">
-                        ➕ Cadastrar primeiro colaborador
-                    </button>
-                </td>
-            </tr>
-        `;
-        return;
-    }
+    if (!tbody) return;
     
     tbody.innerHTML = '';
     
-    colaboradoresFiltrados.forEach(colaborador => {
+    if (dadosFiltrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum colaborador cadastrado</td></tr>';
+        return;
+    }
+    
+    dadosFiltrados.forEach(colab => {
         const tr = document.createElement('tr');
         
-        // Status badge
-        const statusBadge = colaborador.ativo 
-            ? '<span class="badge badge-success">Ativo</span>'
-            : '<span class="badge badge-secondary">Inativo</span>';
+        // Foto
+        const fotoHtml = colab.foto_url ? 
+            `<img src="${colab.foto_url}" alt="${colab.nome}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
+            '<span style="font-size: 32px;">👤</span>';
         
-        // Nome da contratada
-        const contratadaNome = colaborador.contratada_id 
-            ? (contratadas.find(c => c.id === colaborador.contratada_id)?.nome || 'N/A')
-            : 'Próprio';
+        // Recursos (ícones de foto, NFC, assinatura)
+        const recursos = [];
+        if (colab.foto_url) recursos.push('📸');
+        if (colab.nfc_tag_id) recursos.push('📱');
+        if (colab.assinatura_url) recursos.push('✍️');
+        const recursosHtml = recursos.length > 0 ? recursos.join(' ') : '-';
+        
+        // Status
+        const statusBadge = colab.ativo ? 
+            '<span class="badge badge-success">Ativo</span>' : 
+            '<span class="badge badge-secondary">Inativo</span>';
         
         tr.innerHTML = `
-            <td><strong>${colaborador.nome}</strong></td>
-            <td>${colaborador.funcao}</td>
-            <td>${UTILS.formatCPF(colaborador.cpf)}</td>
-            <td>${colaborador.telefone ? UTILS.formatPhone(colaborador.telefone) : '-'}</td>
-            <td>${contratadaNome}</td>
-            <td>${colaborador.nfc_id || '-'}</td>
+            <td>${fotoHtml}</td>
+            <td><strong>${colab.nome}</strong>${colab.matricula ? `<br><small>${colab.matricula}</small>` : ''}</td>
+            <td>${formatarCPF(colab.cpf)}</td>
+            <td>${capitalizar(colab.funcao)}</td>
+            <td>${colab.telefone || '-'}</td>
+            <td>${recursosHtml}</td>
             <td>${statusBadge}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editarColaborador('${colaborador.id}')" title="Editar">
-                    ✏️
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deletarColaborador('${colaborador.id}')" title="Deletar">
-                    🗑️
-                </button>
+                <button class="btn btn-sm btn-primary" onclick="editarColaborador('${colab.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="deletarColaborador('${colab.id}', '${colab.nome}')">🗑️</button>
             </td>
         `;
         
@@ -187,178 +178,335 @@ function renderColaboradores() {
 }
 
 /* ============================================================================
-   EVENT LISTENERS
+   FILTRAR COLABORADORES
    ============================================================================ */
-function setupEventListeners() {
-    // Logout
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-        if (confirm('Deseja realmente sair?')) {
-            await AUTH.logout();
-        }
-    });
+function filtrarColaboradores() {
+    const busca = document.getElementById('filtro-busca')?.value.toLowerCase() || '';
+    const funcao = document.getElementById('filtro-funcao')?.value || '';
+    const ativo = document.getElementById('filtro-ativo')?.value || '';
     
-    // Menu mobile
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-    const sidebar = document.getElementById('sidebar');
+    let filtrados = colaboradores;
     
-    if (mobileMenuToggle) {
-        mobileMenuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('mobile-open');
-        });
+    // Filtro de função
+    if (funcao) {
+        filtrados = filtrados.filter(c => c.funcao === funcao);
     }
     
-    // Novo colaborador
-    document.getElementById('btn-novo-colaborador').addEventListener('click', () => {
-        abrirModal();
-    });
-    
-    // Fechar modal
-    document.getElementById('btn-close-modal').addEventListener('click', () => {
-        fecharModal();
-    });
-    
-    document.getElementById('btn-cancel').addEventListener('click', () => {
-        fecharModal();
-    });
-    
-    // Fechar modal ao clicar fora
-    document.getElementById('modal-colaborador').addEventListener('click', (e) => {
-        if (e.target.id === 'modal-colaborador') {
-            fecharModal();
-        }
-    });
-    
-    // Submit form
-    document.getElementById('form-colaborador').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await salvarColaborador();
-    });
-    
-    // Busca
-    document.getElementById('search-colaboradores').addEventListener('input', (e) => {
-        filtrarColaboradores(e.target.value);
-    });
-    
-    // Filtro de contratada
-    document.getElementById('filter-contratada').addEventListener('change', () => {
-        aplicarFiltros();
-    });
-    
     // Filtro de status
-    document.getElementById('filter-status').addEventListener('change', () => {
-        aplicarFiltros();
-    });
+    if (ativo) {
+        const isAtivo = ativo === 'true';
+        filtrados = filtrados.filter(c => c.ativo === isAtivo);
+    }
+    
+    // Filtro de busca
+    if (busca) {
+        filtrados = filtrados.filter(c =>
+            c.nome.toLowerCase().includes(busca) ||
+            (c.cpf && c.cpf.includes(busca)) ||
+            (c.matricula && c.matricula.toLowerCase().includes(busca))
+        );
+    }
+    
+    renderizarTabela(filtrados);
 }
 
 /* ============================================================================
    MODAL
    ============================================================================ */
-function abrirModal(colaborador = null) {
-    const modal = document.getElementById('modal-colaborador');
-    const modalTitle = document.getElementById('modal-title');
-    const form = document.getElementById('form-colaborador');
+function abrirModalNovo() {
+    colaboradorEditando = null;
+    document.getElementById('modal-titulo').textContent = 'Novo Colaborador';
+    document.getElementById('form-colaborador').reset();
+    document.getElementById('ativo').checked = true;
     
-    // Resetar form
-    form.reset();
+    // Limpar foto, NFC e assinatura
+    removerFoto();
+    document.getElementById('nfc_tag_id').value = '';
+    document.getElementById('nfc-status').innerHTML = '';
+    limparAssinatura();
     
-    if (colaborador) {
-        // Modo edição
-        modalTitle.textContent = 'Editar Colaborador';
-        colaboradorEditando = colaborador;
-        
-        // Preencher campos
-        document.getElementById('colaborador-id').value = colaborador.id;
-        document.getElementById('colaborador-nome').value = colaborador.nome || '';
-        document.getElementById('colaborador-funcao').value = colaborador.funcao || '';
-        document.getElementById('colaborador-cpf').value = UTILS.formatCPF(colaborador.cpf || '');
-        document.getElementById('colaborador-telefone').value = colaborador.telefone ? UTILS.formatPhone(colaborador.telefone) : '';
-        document.getElementById('colaborador-contratada').value = colaborador.contratada_id || '';
-        document.getElementById('colaborador-nfc-id').value = colaborador.nfc_id || '';
-        document.getElementById('colaborador-email').value = colaborador.email || '';
-        document.getElementById('colaborador-observacoes').value = colaborador.observacoes || '';
-        document.getElementById('colaborador-ativo').value = colaborador.ativo ? 'true' : 'false';
-        
-    } else {
-        // Modo criação
-        modalTitle.textContent = 'Novo Colaborador';
-        colaboradorEditando = null;
-        document.getElementById('colaborador-ativo').value = 'true';
-    }
+    // Voltar para primeira aba
+    document.querySelector('.tab-button[data-tab="dados"]')?.click();
     
-    // Mostrar modal
-    modal.classList.add('show');
-    document.body.style.overflow = 'hidden';
+    document.getElementById('modal-colaborador').classList.add('show');
 }
 
 function fecharModal() {
-    const modal = document.getElementById('modal-colaborador');
-    modal.classList.remove('show');
-    document.body.style.overflow = '';
+    document.getElementById('modal-colaborador').classList.remove('show');
+    pararCamera();
     colaboradorEditando = null;
+}
+
+/* ============================================================================
+   CÂMERA E FOTO FACIAL
+   ============================================================================ */
+async function iniciarCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'user',
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            } 
+        });
+        
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        
+        document.getElementById('camera-container').style.display = 'block';
+        document.getElementById('btn-iniciar-camera').style.display = 'none';
+        
+        console.log('✅ Câmera iniciada');
+        
+    } catch (error) {
+        console.error('Erro ao iniciar câmera:', error);
+        alert('Erro ao acessar câmera. Verifique as permissões.');
+    }
+}
+
+function pararCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        
+        document.getElementById('camera-container').style.display = 'none';
+        document.getElementById('btn-iniciar-camera').style.display = 'inline-block';
+        
+        console.log('✅ Câmera parada');
+    }
+}
+
+function capturarFoto() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const preview = document.getElementById('photo-preview');
+    
+    // Configurar canvas
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Capturar frame
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    // Converter para base64
+    const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+    
+    // Mostrar preview
+    preview.src = dataURL;
+    preview.classList.add('show');
+    document.getElementById('foto_base64').value = dataURL;
+    document.getElementById('btn-remover-foto').style.display = 'inline-block';
+    
+    // Parar câmera
+    pararCamera();
+    
+    console.log('✅ Foto capturada');
+    UTILS.showSuccess('Foto capturada com sucesso!');
+}
+
+function removerFoto() {
+    const preview = document.getElementById('photo-preview');
+    preview.src = '';
+    preview.classList.remove('show');
+    document.getElementById('foto_base64').value = '';
+    document.getElementById('btn-remover-foto').style.display = 'none';
+    
+    console.log('✅ Foto removida');
+}
+
+/* ============================================================================
+   NFC
+   ============================================================================ */
+async function lerNFC() {
+    const statusDiv = document.getElementById('nfc-status');
+    
+    // Verificar se NFC está disponível
+    if ('NDEFReader' in window) {
+        try {
+            statusDiv.innerHTML = '<div class="nfc-status waiting">📱 Aproxime a tag NFC...</div>';
+            
+            const ndef = new NDEFReader();
+            await ndef.scan();
+            
+            ndef.addEventListener('reading', ({ serialNumber }) => {
+                const tagId = serialNumber.replace(/:/g, '');
+                document.getElementById('nfc_tag_id').value = tagId;
+                statusDiv.innerHTML = '<div class="nfc-status success">✅ Tag NFC lida com sucesso!</div>';
+                
+                console.log('✅ NFC lido:', tagId);
+                UTILS.showSuccess('Tag NFC registrada!');
+            });
+            
+        } catch (error) {
+            console.error('Erro ao ler NFC:', error);
+            statusDiv.innerHTML = '<div class="nfc-status">❌ Erro ao ler NFC. Verifique as permissões.</div>';
+        }
+    } else {
+        // NFC não disponível - permitir entrada manual
+        statusDiv.innerHTML = '<div class="nfc-status">ℹ️ NFC não disponível neste dispositivo. Digite o ID manualmente.</div>';
+    }
+}
+
+/* ============================================================================
+   ASSINATURA DIGITAL
+   ============================================================================ */
+function setupSignaturePad() {
+    const canvas = document.getElementById('signature-pad');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    
+    // Configurar estilo
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Mouse events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    
+    // Touch events
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', stopDrawing);
+    
+    function startDrawing(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+    }
+    
+    function draw(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        
+        lastX = x;
+        lastY = y;
+    }
+    
+    function stopDrawing() {
+        isDrawing = false;
+    }
+    
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        lastX = touch.clientX - rect.left;
+        lastY = touch.clientY - rect.top;
+        isDrawing = true;
+    }
+    
+    function handleTouchMove(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        
+        lastX = x;
+        lastY = y;
+    }
+    
+    signaturePad = { canvas, ctx };
+}
+
+function limparAssinatura() {
+    if (!signaturePad) return;
+    
+    const { canvas, ctx } = signaturePad;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    document.getElementById('signature-preview').classList.remove('show');
+    document.getElementById('assinatura_base64').value = '';
+    
+    console.log('✅ Assinatura limpa');
+}
+
+function salvarAssinatura() {
+    if (!signaturePad) return;
+    
+    const canvas = signaturePad.canvas;
+    
+    // Converter para base64
+    const dataURL = canvas.toDataURL('image/png');
+    
+    // Mostrar preview
+    const preview = document.getElementById('signature-preview');
+    preview.src = dataURL;
+    preview.classList.add('show');
+    document.getElementById('assinatura_base64').value = dataURL;
+    
+    console.log('✅ Assinatura salva');
+    UTILS.showSuccess('Assinatura capturada com sucesso!');
 }
 
 /* ============================================================================
    SALVAR COLABORADOR
    ============================================================================ */
-async function salvarColaborador() {
+async function salvarColaborador(e) {
+    e.preventDefault();
+    
     try {
-        // Obter dados do form
-        const cpf = document.getElementById('colaborador-cpf').value.replace(/\D/g, '');
-        const telefone = document.getElementById('colaborador-telefone').value.replace(/\D/g, '');
-        const contratadaId = document.getElementById('colaborador-contratada').value;
-        
         const dados = {
-            nome: document.getElementById('colaborador-nome').value.trim(),
-            funcao: document.getElementById('colaborador-funcao').value.trim(),
-            cpf: cpf,
-            telefone: telefone || null,
-            contratada_id: contratadaId || null,
-            nfc_id: document.getElementById('colaborador-nfc-id').value.trim() || null,
-            email: document.getElementById('colaborador-email').value.trim() || null,
-            observacoes: document.getElementById('colaborador-observacoes').value.trim() || null,
-            ativo: document.getElementById('colaborador-ativo').value === 'true'
+            nome: document.getElementById('nome').value,
+            matricula: document.getElementById('matricula').value || null,
+            cpf: document.getElementById('cpf').value,
+            rg: document.getElementById('rg').value || null,
+            data_nascimento: document.getElementById('data_nascimento').value || null,
+            telefone: document.getElementById('telefone').value || null,
+            email: document.getElementById('email').value || null,
+            funcao: document.getElementById('funcao').value,
+            contratada_id: document.getElementById('contratada_id').value || null,
+            data_admissao: document.getElementById('data_admissao').value || null,
+            salario: document.getElementById('salario').value || null,
+            ativo: document.getElementById('ativo').checked,
+            foto_base64: document.getElementById('foto_base64').value || null,
+            nfc_tag_id: document.getElementById('nfc_tag_id').value || null,
+            assinatura_base64: document.getElementById('assinatura_base64').value || null
         };
-        
-        // Validar
-        if (!dados.nome || !dados.funcao || !dados.cpf) {
-            UTILS.showError('Preencha todos os campos obrigatórios', '#alert-container');
-            return;
-        }
-        
-        // Validar CPF
-        if (!UTILS.isValidCPF(dados.cpf)) {
-            UTILS.showError('CPF inválido', '#alert-container');
-            return;
-        }
         
         UTILS.showLoading();
         
         if (colaboradorEditando) {
-            // Atualizar
-            await DB.updateData('colaboradores', colaboradorEditando.id, dados);
-            UTILS.showSuccess('Colaborador atualizado com sucesso!', '#alert-container');
+            await DB.updateData('colaboradores', colaboradorEditando, dados);
+            UTILS.showSuccess('Colaborador atualizado com sucesso!');
         } else {
-            // Criar
             await DB.insertData('colaboradores', dados);
-            UTILS.showSuccess('Colaborador cadastrado com sucesso!', '#alert-container');
+            UTILS.showSuccess('Colaborador cadastrado com sucesso!');
         }
         
-        // Recarregar lista
-        await loadColaboradores();
-        
-        // Fechar modal
         fecharModal();
+        await carregarColaboradores();
+        
+        UTILS.hideLoading();
         
     } catch (error) {
         console.error('Erro ao salvar colaborador:', error);
-        
-        // Verificar se é erro de CPF duplicado
-        if (error.message && error.message.includes('duplicate') && error.message.includes('cpf')) {
-            UTILS.showError('Este CPF já está cadastrado!', '#alert-container');
-        } else {
-            UTILS.showError('Erro ao salvar colaborador: ' + error.message, '#alert-container');
-        }
-    } finally {
+        UTILS.showError('Erro ao salvar colaborador');
         UTILS.hideLoading();
     }
 }
@@ -366,125 +514,106 @@ async function salvarColaborador() {
 /* ============================================================================
    EDITAR COLABORADOR
    ============================================================================ */
-async function editarColaborador(colaboradorId) {
+async function editarColaborador(id) {
     try {
-        const colaborador = colaboradores.find(c => c.id === colaboradorId);
+        UTILS.showLoading();
         
-        if (!colaborador) {
+        const colab = await DB.fetchOne('colaboradores', { id });
+        
+        if (!colab) {
             UTILS.showError('Colaborador não encontrado');
             return;
         }
         
-        abrirModal(colaborador);
+        colaboradorEditando = id;
+        
+        // Preencher form
+        document.getElementById('nome').value = colab.nome;
+        document.getElementById('matricula').value = colab.matricula || '';
+        document.getElementById('cpf').value = colab.cpf;
+        document.getElementById('rg').value = colab.rg || '';
+        document.getElementById('data_nascimento').value = colab.data_nascimento || '';
+        document.getElementById('telefone').value = colab.telefone || '';
+        document.getElementById('email').value = colab.email || '';
+        document.getElementById('funcao').value = colab.funcao;
+        document.getElementById('contratada_id').value = colab.contratada_id || '';
+        document.getElementById('data_admissao').value = colab.data_admissao || '';
+        document.getElementById('salario').value = colab.salario || '';
+        document.getElementById('ativo').checked = colab.ativo;
+        
+        // Foto
+        if (colab.foto_base64) {
+            document.getElementById('photo-preview').src = colab.foto_base64;
+            document.getElementById('photo-preview').classList.add('show');
+            document.getElementById('foto_base64').value = colab.foto_base64;
+            document.getElementById('btn-remover-foto').style.display = 'inline-block';
+        }
+        
+        // NFC
+        if (colab.nfc_tag_id) {
+            document.getElementById('nfc_tag_id').value = colab.nfc_tag_id;
+            document.getElementById('nfc-status').innerHTML = '<div class="nfc-status success">✅ Tag NFC cadastrada</div>';
+        }
+        
+        // Assinatura
+        if (colab.assinatura_base64) {
+            document.getElementById('signature-preview').src = colab.assinatura_base64;
+            document.getElementById('signature-preview').classList.add('show');
+            document.getElementById('assinatura_base64').value = colab.assinatura_base64;
+        }
+        
+        document.getElementById('modal-titulo').textContent = 'Editar Colaborador';
+        document.getElementById('modal-colaborador').classList.add('show');
+        
+        UTILS.hideLoading();
         
     } catch (error) {
-        console.error('Erro ao editar colaborador:', error);
-        UTILS.showError('Erro ao carregar dados do colaborador');
+        console.error('Erro ao carregar colaborador:', error);
+        UTILS.showError('Erro ao carregar colaborador');
+        UTILS.hideLoading();
     }
 }
 
 /* ============================================================================
    DELETAR COLABORADOR
    ============================================================================ */
-async function deletarColaborador(colaboradorId) {
+async function deletarColaborador(id, nome) {
+    if (!confirm(`Deseja realmente excluir o colaborador "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        return;
+    }
+    
     try {
-        const colaborador = colaboradores.find(c => c.id === colaboradorId);
-        
-        if (!colaborador) {
-            UTILS.showError('Colaborador não encontrado');
-            return;
-        }
-        
-        const confirmacao = confirm(
-            `Tem certeza que deseja deletar o colaborador "${colaborador.nome}"?\n\n` +
-            `ATENÇÃO: Esta ação não pode ser desfeita!`
-        );
-        
-        if (!confirmacao) return;
-        
         UTILS.showLoading();
         
-        await DB.deleteData('colaboradores', colaboradorId);
+        await DB.deleteData('colaboradores', id);
         
-        UTILS.showSuccess('Colaborador deletado com sucesso!', '#alert-container');
+        UTILS.showSuccess('Colaborador excluído com sucesso!');
+        await carregarColaboradores();
         
-        // Recarregar lista
-        await loadColaboradores();
+        UTILS.hideLoading();
         
     } catch (error) {
         console.error('Erro ao deletar colaborador:', error);
-        UTILS.showError('Erro ao deletar colaborador: ' + error.message, '#alert-container');
-    } finally {
+        UTILS.showError('Erro ao deletar colaborador');
         UTILS.hideLoading();
     }
 }
 
 /* ============================================================================
-   FILTROS
+   FUNÇÕES AUXILIARES
    ============================================================================ */
-function filtrarColaboradores(termo) {
-    termo = termo.toLowerCase().trim();
-    
-    colaboradoresFiltrados = colaboradores;
-    
-    if (termo) {
-        colaboradoresFiltrados = colaboradoresFiltrados.filter(colaborador => {
-            const cpfLimpo = colaborador.cpf.replace(/\D/g, '');
-            return (
-                colaborador.nome.toLowerCase().includes(termo) ||
-                colaborador.funcao.toLowerCase().includes(termo) ||
-                cpfLimpo.includes(termo.replace(/\D/g, ''))
-            );
-        });
-    }
-    
-    // Aplicar outros filtros
-    aplicarFiltros();
+function formatarCPF(cpf) {
+    if (!cpf) return '-';
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
-function aplicarFiltros() {
-    const termoBusca = document.getElementById('search-colaboradores').value.toLowerCase().trim();
-    const contratadaFiltro = document.getElementById('filter-contratada').value;
-    const statusFiltro = document.getElementById('filter-status').value;
-    
-    // Começar com todos
-    let resultado = colaboradores;
-    
-    // Filtrar por busca
-    if (termoBusca) {
-        resultado = resultado.filter(colaborador => {
-            const cpfLimpo = colaborador.cpf.replace(/\D/g, '');
-            return (
-                colaborador.nome.toLowerCase().includes(termoBusca) ||
-                colaborador.funcao.toLowerCase().includes(termoBusca) ||
-                cpfLimpo.includes(termoBusca.replace(/\D/g, ''))
-            );
-        });
-    }
-    
-    // Filtrar por contratada
-    if (contratadaFiltro) {
-        if (contratadaFiltro === 'proprio') {
-            resultado = resultado.filter(c => !c.contratada_id);
-        } else {
-            resultado = resultado.filter(c => c.contratada_id === contratadaFiltro);
-        }
-    }
-    
-    // Filtrar por status
-    if (statusFiltro === 'ativo') {
-        resultado = resultado.filter(c => c.ativo);
-    } else if (statusFiltro === 'inativo') {
-        resultado = resultado.filter(c => !c.ativo);
-    }
-    
-    colaboradoresFiltrados = resultado;
-    renderColaboradores();
+function capitalizar(texto) {
+    if (!texto) return '-';
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 // Exportar funções globais
 window.editarColaborador = editarColaborador;
 window.deletarColaborador = deletarColaborador;
-window.abrirModal = abrirModal;
 
-console.log('✅ Colaboradores.js carregado');
+console.log('✅ Colaboradores.js carregado (Com Facial, NFC e Assinatura)');

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Equipamentos - RDO Fidel</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">RDO</div>
+            <h2>RDO Fidel</h2>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">Cadastros</div>
+                <a href="obras.html" class="nav-item">
+                    <span class="nav-icon">🏗️</span>
+                    <span class="nav-text">Obras</span>
+                </a>
+                <a href="colaboradores.html" class="nav-item">
+                    <span class="nav-icon">👷</span>
+                    <span class="nav-text">Colaboradores</span>
+                </a>
+                <a href="equipes.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">Equipes</span>
+                </a>
+                <a href="equipamentos.html" class="nav-item active">
+                    <span class="nav-icon">🚜</span>
+                    <span class="nav-text">Equipamentos</span>
+                </a>
+                <a href="atividades.html" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Atividades</span>
+                </a>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-group-title">RDO</div>
+                <a href="../rdo/novo-rdo.html" class="nav-item">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Novo RDO</span>
+                </a>
+                <a href="../rdo/lista-rdos.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Listar RDOs</span>
+                </a>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="btn btn-outline btn-block" id="btn-logout">
+                <span>🚪</span> Sair
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h1>Cadastro de Equipamentos</h1>
+            </div>
+            
+            <div class="header-right">
+                <button class="btn btn-primary" id="btn-novo-equipamento">
+                    ➕ Novo Equipamento
+                </button>
+            </div>
+        </header>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Alertas -->
+            <div id="alert-container"></div>
+            
+            <!-- Filtros -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="filters-row">
+                        <div class="filter-item" style="flex: 1;">
+                            <input 
+                                type="text" 
+                                id="search-equipamentos" 
+                                class="form-control" 
+                                placeholder="🔍 Buscar por nome, marca ou placa..."
+                            >
+                        </div>
+                        <div class="filter-item">
+                            <select id="filter-tipo" class="form-control">
+                                <option value="">Todos os tipos</option>
+                                <option value="proprio">Próprios</option>
+                                <option value="locado">Locados</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <select id="filter-status" class="form-control">
+                                <option value="">Todos os status</option>
+                                <option value="ativo">Ativos</option>
+                                <option value="inativo">Inativos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de Equipamentos -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Equipamentos Cadastrados (<span id="total-equipamentos">0</span>)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Marca/Modelo</th>
+                                    <th>Placa</th>
+                                    <th>Tipo</th>
+                                    <th>Aquisição</th>
+                                    <th>Valor Locação/h</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="equipamentos-tbody">
+                                <tr>
+                                    <td colspan="8" class="text-center">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal" id="modal-equipamento">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Novo Equipamento</h2>
+                    <button class="modal-close" id="btn-close-modal">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <form id="form-equipamento">
+                        <input type="hidden" id="equipamento-id">
+                        
+                        <div class="form-row">
+                            <div class="form-group col-12">
+                                <label for="equipamento-nome" class="form-label">
+                                    Nome do Equipamento <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="equipamento-nome" 
+                                    class="form-control" 
+                                    required
+                                    placeholder="Ex: Retroescavadeira CAT, Betoneira 400L"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="equipamento-marca" class="form-label">
+                                    Marca
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="equipamento-marca" 
+                                    class="form-control"
+                                    placeholder="Ex: Caterpillar, Komatsu"
+                                >
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="equipamento-modelo" class="form-label">
+                                    Modelo
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="equipamento-modelo" 
+                                    class="form-control"
+                                    placeholder="Ex: 416F, PC200"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label for="equipamento-placa" class="form-label">
+                                    Placa
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="equipamento-placa" 
+                                    class="form-control"
+                                    placeholder="ABC-1234"
+                                    maxlength="8"
+                                >
+                            </div>
+                            
+                            <div class="form-group col-md-4">
+                                <label for="equipamento-tipo" class="form-label">
+                                    Tipo <span class="required">*</span>
+                                </label>
+                                <select id="equipamento-tipo" class="form-control" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="proprio">Próprio</option>
+                                    <option value="locado">Locado</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group col-md-4">
+                                <label for="equipamento-data-aquisicao" class="form-label">
+                                    Data de Aquisição
+                                </label>
+                                <input 
+                                    type="date" 
+                                    id="equipamento-data-aquisicao" 
+                                    class="form-control"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="equipamento-valor-locacao" class="form-label">
+                                    Valor Locação por Hora (R$)
+                                </label>
+                                <input 
+                                    type="number" 
+                                    id="equipamento-valor-locacao" 
+                                    class="form-control"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                >
+                                <small class="form-text">Preencha apenas se for equipamento locado</small>
+                            </div>
+                            
+                            <div class="form-group col-md-6">
+                                <label for="equipamento-ativo" class="form-label">
+                                    Status
+                                </label>
+                                <select id="equipamento-ativo" class="form-control">
+                                    <option value="true">Ativo</option>
+                                    <option value="false">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="equipamento-observacoes" class="form-label">
+                                Observações
+                            </label>
+                            <textarea 
+                                id="equipamento-observacoes" 
+                                class="form-control" 
+                                rows="3"
+                                placeholder="Informações adicionais sobre o equipamento..."
+                            ></textarea>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel">
+                        Cancelar
+                    </button>
+                    <button type="submit" form="form-equipamento" class="btn btn-primary" id="btn-salvar">
+                        💾 Salvar Equipamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="../../js/config.js"></script>
+    <script src="../../js/database.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="equipamentos.js"></script>
+</body>
+</html>
