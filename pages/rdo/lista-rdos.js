@@ -112,7 +112,7 @@ function renderRDOs() {
             <tr>
                 <td colspan="8" class="text-center">
                     Nenhum RDO encontrado.
-                    <button class="btn btn-primary btn-sm mt-2" onclick="window.location.href='novo-rdo.html'">
+                    <button class="btn btn-primary btn-sm mt-2" onclick="window.location.href='novo-rdo-v2.html'">
                         ➕ Criar primeiro RDO
                     </button>
                 </td>

@@ -26,7 +26,7 @@ const APP_CONFIG = {
             equipamentos: 'pages/cadastros/equipamentos.html'
         },
         rdo: {
-            novo: 'pages/rdo/novo-rdo.html',
+            novo: 'pages/rdo/novo-rdo-v2.html',
             lista: 'pages/rdo/lista-rdos.html',
             visualizar: 'pages/rdo/visualizar-rdo.html'
         }

@@ -353,7 +353,7 @@ async function loadObrasTable() {
                 <td>${UTILS.formatDateBR(obra.data_inicio)}</td>
                 <td><span class="badge ${badgeClass}">${status}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="window.location.href='rdo/novo-rdo.html?obra=${obra.id}'">
+                    <button class="btn btn-sm btn-primary" onclick="window.location.href='rdo/novo-rdo-v2.html?obra=${obra.id}'">
                         Novo RDO
                     </button>
                 </td>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo RDO - RDO Fidel v2.0</title>
+    
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="stylesheet" href="../../css/responsive.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        .rdo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .rdo-numero {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .rdo-data-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .status-badge.active {
+            border-color: #000;
+            transform: scale(1.05);
+        }
+        
+        .status-presente { background: #d4edda; color: #155724; }
+        .status-ausente { background: #f8d7da; color: #721c24; }
+        .status-ferias { background: #fff3cd; color: #856404; }
+        .status-afastado { background: #e2e3e5; color: #383d41; }
+        .status-transferido { background: #d1ecf1; color: #0c5460; }
+        .status-emprestado { background: #d6d8db; color: #1b1e21; }
+        
+        .colaborador-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .colaborador-confirmado {
+            border-left-color: #28a745;
+            background: #e8f5e9;
+        }
+        
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .photo-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+        }
+        
+        .photo-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 10px;
+            padding: 4px;
+            text-align: center;
+        }
+        
+        .signature-pad {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: crosshair;
+            touch-action: none;
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            height: 200px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .clima-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .clima-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .clima-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .atividade-row {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .rdo-numero {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">RDO</div>
+            <h2>RDO Fidel</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="../dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <div class="nav-group">
+                <div class="nav-group-title">RDO</div>
+                <a href="novo-rdo.html" class="nav-item active">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Novo RDO</span>
+                </a>
+                <a href="lista-rdos.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Listar RDOs</span>
+                </a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn btn-outline btn-block" id="btn-logout">🚪 Sair</button>
+        </div>
+    </aside>
+    
+    <div class="main-content">
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                    <span></span><span></span><span></span>
+                </button>
+                <h1>Novo RDO v2.0</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span class="user-avatar">👤</span>
+                    <span class="user-name" id="user-name"></span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="content">
+            <div class="rdo-header">
+                <div style="font-size: 16px; opacity: 0.9;">Relatório Diário de Obra</div>
+                <div class="rdo-numero" id="rdo-numero">00000000</div>
+                <div class="rdo-data-badge" id="rdo-data-badge">...</div>
+                <div style="margin-top: 10px; font-size: 14px;" id="obra-nome">Carregando obra...</div>
+            </div>
+            
+            <form id="form-rdo">
+                <!-- 1. Dados Básicos -->
+                <div class="section-card">
+                    <h3 class="section-title">📋 Informações Básicas</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Data <span class="required">*</span></label>
+                            <input type="date" id="data" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Localização GPS</label>
+                            <input type="text" id="gps_location" class="form-control" readonly>
+                            <button type="button" class="btn btn-sm btn-secondary" id="btn-get-gps" style="margin-top: 5px;">📍 Capturar GPS</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Supervisor <span class="required">*</span></label>
+                            <select id="supervisor_id" class="form-control" required>
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Encarregado <span class="required">*</span></label>
+                            <select id="encarregado_id" class="form-control" required>
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Teve PTS? <span class="required">*</span></label>
+                        <div style="display: flex; gap: 20px;">
+                            <label><input type="radio" name="teve_pts" value="sim" required> Sim</label>
+                            <label><input type="radio" name="teve_pts" value="nao" required checked> Não</label>
+                        </div>
+                    </div>
+                    
+                    <!-- PTS Detalhada (Condicional) -->
+                    <div id="pts-detalhada" style="display: none;">
+                        <hr style="margin: 20px 0;">
+                        <h4 style="color: #667eea; margin-bottom: 15px;">📋 Detalhes da PTS</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Número da PTS <span class="required">*</span></label>
+                                <input type="text" id="pts_numero" class="form-control">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Descrição da PTS <span class="required">*</span></label>
+                                <input type="text" id="pts_descricao" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-3">
+                                <label>Hora Prevista Início</label>
+                                <input type="time" id="pts_hora_prevista" class="form-control">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Hora Solicitação</label>
+                                <input type="time" id="pts_hora_solicitacao" class="form-control">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Hora Emissão</label>
+                                <input type="time" id="pts_hora_emissao" class="form-control">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Hora Liberação</label>
+                                <input type="time" id="pts_hora_liberacao" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Hora Fechamento</label>
+                                <input type="time" id="pts_hora_fechamento" class="form-control">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Tempo de Liberação (calculado)</label>
+                                <input type="text" id="pts_tempo_liberacao" class="form-control" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Foto da PTS</label>
+                            <div class="upload-area" onclick="document.getElementById('pts-foto-input').click()">
+                                <input type="file" id="pts-foto-input" accept="image/*" style="display: none;">
+                                <p style="font-size: 32px; margin: 0;">📷</p>
+                                <p>Foto da PTS</p>
+                                <small>Será salva como: rdo{número}-pts-0001.jpg</small>
+                            </div>
+                            <div class="photo-grid" id="pts-foto-grid"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 2. Condições Climáticas -->
+                <div class="section-card">
+                    <h3 class="section-title">🌤️ Condições Climáticas</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Manhã</label>
+                            <select id="clima_manha" class="form-control">
+                                <option value="">Selecione...</option>
+                                <option value="bom">☀️ Bom</option>
+                                <option value="bom_inoperante">⛅ Bom Inoperante</option>
+                                <option value="chuva">🌧️ Chuva</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Tarde</label>
+                            <select id="clima_tarde" class="form-control">
+                                <option value="">Selecione...</option>
+                                <option value="bom">☀️ Bom</option>
+                                <option value="bom_inoperante">⛅ Bom Inoperante</option>
+                                <option value="chuva">🌧️ Chuva</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Noite</label>
+                            <select id="clima_noite" class="form-control">
+                                <option value="">Selecione...</option>
+                                <option value="bom">☀️ Bom</option>
+                                <option value="bom_inoperante">⛅ Bom Inoperante</option>
+                                <option value="chuva">🌧️ Chuva</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" id="btn-buscar-clima">
+                        🌍 Buscar Dados Meteorológicos Automáticos
+                    </button>
+                    
+                    <div class="clima-card" id="clima-automatico" style="display: none;">
+                        <h4 style="margin-top: 0;">Dados Meteorológicos do Dia</h4>
+                        <div class="clima-info" id="clima-info"></div>
+                    </div>
+                </div>
+                
+                <!-- 3. Equipe -->
+                <div class="section-card">
+                    <h3 class="section-title">👷 Equipe</h3>
+                    <div id="equipe-container">
+                        <p style="color: #999; font-style: italic;">Selecione um encarregado para carregar a equipe...</p>
+                    </div>
+                </div>
+                
+                <!-- 4. Atividades -->
+                <div class="section-card">
+                    <h3 class="section-title">📋 Atividades Executadas</h3>
+                    <div id="atividades-container">
+                        <p style="color: #999; font-style: italic;">As atividades aparecerão aqui após confirmar os colaboradores presentes...</p>
+                    </div>
+                </div>
+                
+                <!-- 5. Ocorrências -->
+                <div class="section-card">
+                    <h3 class="section-title">⚠️ Ocorrências / Interferências / Paralisações / QCO</h3>
+                    <div id="ocorrencias-container"></div>
+                    <button type="button" class="btn btn-primary" id="btn-add-ocorrencia">➕ Adicionar</button>
+                </div>
+                
+                <!-- 6. Fotos Gerais -->
+                <div class="section-card">
+                    <h3 class="section-title">📷 Fotos Gerais do RDO</h3>
+                    <div class="upload-area" id="upload-area-geral">
+                        <input type="file" id="foto-input-geral" accept="image/*" multiple style="display: none;">
+                        <p style="font-size: 48px; margin: 0;">📷</p>
+                        <p>Clique ou arraste fotos aqui</p>
+                    </div>
+                    <div class="photo-grid" id="fotos-gerais-grid"></div>
+                </div>
+                
+                <!-- 7. Assinatura -->
+                <div class="section-card">
+                    <h3 class="section-title">✍️ Assinatura do Preenchedor</h3>
+                    <div style="text-align: center;">
+                        <canvas id="signature-pad" class="signature-pad"></canvas>
+                        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                            <button type="button" class="btn btn-secondary" id="btn-limpar-assinatura">🔄 Limpar</button>
+                            <button type="button" class="btn btn-info" id="btn-reconhecimento">📸 Reconhecimento Facial</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botões -->
+                <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 30px;">
+                    <button type="button" class="btn btn-secondary" onclick="history.back()">Cancelar</button>
+                    <button type="button" class="btn btn-info" id="btn-preview">👁️ Visualizar Resumo</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvar RDO</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="../../js/config.js"></script>
+    <script src="../../js/database.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="novo-rdo-v2.js"></script>
+</body>
+</html>
