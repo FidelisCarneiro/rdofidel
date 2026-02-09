@@ -1,19 +1,8 @@
 /* ============================================================================
-   RDO FIDEL - DATABASE (Supabase) - VERSÃO FINAL CORRIGIDA
-   ============================================================================
-   
-   CORREÇÃO CRÍTICA:
-   - window.supabase deve ser o CLIENTE criado (não a biblioteca)
-   - Todas as funções devem usar window.supabase direto
-   - Mantém compatibilidade com auth.js, novo-rdo-v2.js, etc.
-   
+   RDO FIDEL - DATABASE (VERSÃO CORRIGIDA)
    ============================================================================ */
 
-// ============================================================================
-// INICIALIZAR CLIENTE SUPABASE GLOBAL
-// ============================================================================
-
-// ⚠️ IMPORTANTE: Sobrescrever window.supabase com o cliente criado
+// 🎯 CORREÇÃO: Sobrescrever window.supabase com cliente criado
 window.supabase = window.supabase.createClient(
     SUPABASE_CONFIG.url,
     SUPABASE_CONFIG.anonKey
@@ -21,41 +10,30 @@ window.supabase = window.supabase.createClient(
 
 console.log('✅ Supabase cliente inicializado globalmente');
 
-// Referência local para usar nas funções deste arquivo
+// Referência local para usar neste arquivo
 const supabase = window.supabase;
 
 /* ============================================================================
    FUNÇÕES GENÉRICAS DE CRUD
    ============================================================================ */
 
-/**
- * Buscar dados de uma tabela
- * @param {string} table - Nome da tabela
- * @param {object} filters - Filtros (ex: { id: '123', ativo: true })
- * @param {string} select - Campos a selecionar (default: '*')
- * @param {object} options - Opções adicionais (order, limit, etc)
- */
 async function fetchData(table, filters = {}, select = '*', options = {}) {
     try {
         let query = supabase.from(table).select(select);
         
-        // Aplicar filtros
         Object.entries(filters).forEach(([key, value]) => {
             query = query.eq(key, value);
         });
         
-        // Aplicar ordenação
         if (options.order) {
             const { column, ascending = true } = options.order;
             query = query.order(column, { ascending });
         }
         
-        // Aplicar limite
         if (options.limit) {
             query = query.limit(options.limit);
         }
         
-        // Executar query
         const { data, error } = await query;
         
         if (error) {
@@ -72,17 +50,11 @@ async function fetchData(table, filters = {}, select = '*', options = {}) {
     }
 }
 
-/**
- * Buscar um único registro
- */
 async function fetchOne(table, filters = {}, select = '*') {
     const data = await fetchData(table, filters, select, { limit: 1 });
     return data && data.length > 0 ? data[0] : null;
 }
 
-/**
- * Inserir dados em uma tabela
- */
 async function insertData(table, data) {
     try {
         const { data: inserted, error } = await supabase
@@ -104,9 +76,6 @@ async function insertData(table, data) {
     }
 }
 
-/**
- * Atualizar dados em uma tabela
- */
 async function updateData(table, id, updates) {
     try {
         const { data, error } = await supabase
@@ -129,9 +98,6 @@ async function updateData(table, id, updates) {
     }
 }
 
-/**
- * Deletar dados de uma tabela
- */
 async function deleteData(table, id) {
     try {
         const { data, error } = await supabase
@@ -158,9 +124,6 @@ async function deleteData(table, id) {
    FUNÇÕES ESPECÍFICAS
    ============================================================================ */
 
-/**
- * Buscar todas as obras
- */
 async function getObras(apenasAtivas = true) {
     const filters = apenasAtivas ? { ativo: true } : {};
     return await fetchData('obras', filters, '*', {
@@ -168,9 +131,6 @@ async function getObras(apenasAtivas = true) {
     });
 }
 
-/**
- * Buscar colaboradores
- */
 async function getColaboradores(apenasAtivos = true) {
     const filters = apenasAtivos ? { ativo: true } : {};
     return await fetchData('colaboradores', filters, '*', {
@@ -178,27 +138,18 @@ async function getColaboradores(apenasAtivos = true) {
     });
 }
 
-/**
- * Buscar equipes de uma obra
- */
 async function getEquipesByObra(obraId) {
     return await fetchData('equipes', { obra_id: obraId, ativo: true }, '*', {
         order: { column: 'nome', ascending: true }
     });
 }
 
-/**
- * Buscar atividades de uma obra
- */
 async function getAtividadesByObra(obraId) {
     return await fetchData('atividades', { obra_id: obraId, ativo: true }, '*', {
         order: { column: 'nome', ascending: true }
     });
 }
 
-/**
- * Buscar RDOs de uma obra
- */
 async function getRDOsByObra(obraId, options = {}) {
     return await fetchData('rdos', { obra_id: obraId }, '*', {
         order: { column: 'data', ascending: false },
@@ -206,17 +157,11 @@ async function getRDOsByObra(obraId, options = {}) {
     });
 }
 
-/**
- * Buscar último RDO de uma obra
- */
 async function getUltimoRDO(obraId) {
     const rdos = await getRDOsByObra(obraId, { limit: 1 });
     return rdos && rdos.length > 0 ? rdos[0] : null;
 }
 
-/**
- * Upload de arquivo para Storage
- */
 async function uploadFile(file, folder = 'anexos') {
     try {
         const fileName = `${folder}/${Date.now()}_${file.name}`;
@@ -230,7 +175,6 @@ async function uploadFile(file, folder = 'anexos') {
             throw error;
         }
         
-        // Obter URL pública
         const { data: urlData } = supabase.storage
             .from(APP_CONFIG.storage.bucket)
             .getPublicUrl(fileName);
@@ -247,9 +191,6 @@ async function uploadFile(file, folder = 'anexos') {
     }
 }
 
-/**
- * Testar conexão com banco de dados
- */
 async function testarConexao() {
     try {
         console.log('🔍 Testando conexão com banco de dados...');
@@ -299,3 +240,27 @@ window.DB = {
 };
 
 console.log('✅ Database.js carregado (VERSÃO FINAL CORRIGIDA)');
+```
+
+#### **4️⃣ SALVE O ARQUIVO:**
+- `Ctrl+S`
+
+#### **5️⃣ RECARREGUE O NAVEGADOR:**
+- `Ctrl+F5` (força recarregar sem cache)
+
+#### **6️⃣ ABRA O CONSOLE (F12):**
+
+**DEVE APARECER:**
+```
+✅ Configurações carregadas
+✅ Supabase cliente inicializado globalmente
+🔍 Testando conexão com banco de dados...
+✅ Conexão com banco OK! Obra encontrada: Obra Industrial GASLUB Itaboraí
+✅ Database.js carregado (VERSÃO FINAL CORRIGIDA)
+```
+
+#### **7️⃣ VÁ PARA NOVO RDO:**
+
+**NO CONSOLE DEVE APARECER:**
+```
+✅ Supervisores carregados: 3
