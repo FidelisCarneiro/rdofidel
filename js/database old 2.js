@@ -1,28 +1,18 @@
 /* ============================================================================
-   RDO FIDEL - DATABASE (Supabase) - VERSÃO FINAL CORRIGIDA
-   ============================================================================
-   
-   CORREÇÃO CRÍTICA:
-   - window.supabase deve ser o CLIENTE criado (não a biblioteca)
-   - Todas as funções devem usar window.supabase direto
-   - Mantém compatibilidade com auth.js, novo-rdo-v2.js, etc.
-   
+   RDO FIDEL - DATABASE (Supabase) - CORRIGIDO
    ============================================================================ */
 
-// ============================================================================
-// INICIALIZAR CLIENTE SUPABASE GLOBAL
-// ============================================================================
-
-// ⚠️ IMPORTANTE: Sobrescrever window.supabase com o cliente criado
-window.supabase = window.supabase.createClient(
+// Inicializar cliente Supabase
+// ⚠️ IMPORTANTE: Não use 'const supabase' porque o CDN já declarou!
+const supabaseClient = window.supabase.createClient(
     SUPABASE_CONFIG.url,
     SUPABASE_CONFIG.anonKey
 );
 
-console.log('✅ Supabase cliente inicializado globalmente');
+// Criar alias para manter compatibilidade com o código
+window.supabase = supabaseClient;
 
-// Referência local para usar nas funções deste arquivo
-const supabase = window.supabase;
+console.log('✅ Supabase cliente inicializado');
 
 /* ============================================================================
    FUNÇÕES GENÉRICAS DE CRUD
@@ -37,7 +27,7 @@ const supabase = window.supabase;
  */
 async function fetchData(table, filters = {}, select = '*', options = {}) {
     try {
-        let query = supabase.from(table).select(select);
+        let query = supabaseClient.from(table).select(select);
         
         // Aplicar filtros
         Object.entries(filters).forEach(([key, value]) => {
@@ -63,7 +53,7 @@ async function fetchData(table, filters = {}, select = '*', options = {}) {
             throw error;
         }
         
-        console.log(`✅ Dados de ${table} carregados:`, data?.length || 0, 'registros');
+        console.log(`✅ Dados de ${table} carregados:`, data);
         return data;
         
     } catch (error) {
@@ -85,7 +75,7 @@ async function fetchOne(table, filters = {}, select = '*') {
  */
 async function insertData(table, data) {
     try {
-        const { data: inserted, error } = await supabase
+        const { data: inserted, error } = await supabaseClient
             .from(table)
             .insert(data)
             .select();
@@ -95,7 +85,7 @@ async function insertData(table, data) {
             throw error;
         }
         
-        console.log(`✅ Dados inseridos em ${table}`);
+        console.log(`✅ Dados inseridos em ${table}:`, inserted);
         return inserted;
         
     } catch (error) {
@@ -109,7 +99,7 @@ async function insertData(table, data) {
  */
 async function updateData(table, id, updates) {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from(table)
             .update(updates)
             .eq('id', id)
@@ -120,7 +110,7 @@ async function updateData(table, id, updates) {
             throw error;
         }
         
-        console.log(`✅ Dados atualizados em ${table}`);
+        console.log(`✅ Dados atualizados em ${table}:`, data);
         return data;
         
     } catch (error) {
@@ -134,7 +124,7 @@ async function updateData(table, id, updates) {
  */
 async function deleteData(table, id) {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from(table)
             .delete()
             .eq('id', id)
@@ -145,7 +135,7 @@ async function deleteData(table, id) {
             throw error;
         }
         
-        console.log(`✅ Dados deletados de ${table}`);
+        console.log(`✅ Dados deletados de ${table}:`, data);
         return data;
         
     } catch (error) {
@@ -221,7 +211,7 @@ async function uploadFile(file, folder = 'anexos') {
     try {
         const fileName = `${folder}/${Date.now()}_${file.name}`;
         
-        const { data, error } = await supabase.storage
+        const { data, error } = await supabaseClient.storage
             .from(APP_CONFIG.storage.bucket)
             .upload(fileName, file);
         
@@ -231,11 +221,11 @@ async function uploadFile(file, folder = 'anexos') {
         }
         
         // Obter URL pública
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = supabaseClient.storage
             .from(APP_CONFIG.storage.bucket)
             .getPublicUrl(fileName);
         
-        console.log('✅ Arquivo enviado');
+        console.log('✅ Arquivo enviado:', urlData.publicUrl);
         return {
             path: fileName,
             url: urlData.publicUrl
@@ -252,23 +242,13 @@ async function uploadFile(file, folder = 'anexos') {
  */
 async function testarConexao() {
     try {
-        console.log('🔍 Testando conexão com banco de dados...');
-        
-        const { data: obras, error } = await supabase
-            .from('obras')
-            .select('id, nome')
-            .limit(1);
-        
-        if (error) {
-            console.error('❌ Erro na conexão:', error);
-            return false;
-        }
+        const obras = await fetchData('obras', {}, 'id, nome', { limit: 1 });
         
         if (obras && obras.length > 0) {
             console.log('✅ Conexão com banco OK! Obra encontrada:', obras[0].nome);
             return true;
         } else {
-            console.log('⚠️ Banco vazio ou sem permissão');
+            console.log('⚠️  Banco vazio ou sem permissão');
             return false;
         }
         
@@ -281,8 +261,9 @@ async function testarConexao() {
 // Testar conexão ao carregar
 testarConexao();
 
-// Exportar funções auxiliares
+// Exportar funções
 window.DB = {
+    supabase: supabaseClient,
     fetchData,
     fetchOne,
     insertData,
@@ -298,4 +279,4 @@ window.DB = {
     testarConexao
 };
 
-console.log('✅ Database.js carregado (VERSÃO FINAL CORRIGIDA)');
+console.log('✅ Database.js carregado (versão corrigida)');
