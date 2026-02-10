@@ -271,26 +271,30 @@ async function carregarTiposOcorrencias() {
 
 async function carregarSupervisores() {
     try {
-        console.log('🔍 Carregando supervisores da obra:', APP_STATE.obra.id);
+        const { data, error } = await window.supabase
+            .from('colaboradores')
+            .select('id, nome')
+            .eq('obra_id', APP_STATE.obra.id)
+            .eq('funcao', 'supervisor')
+            .eq('ativo', true)
+            .order('nome');
         
-        // ✅ USAR FUNÇÃO DO DATABASE.JS
-        const supervisores = await window.DB.getSupervisoresByObra(APP_STATE.obra.id);
+        if (error) throw error;
         
         const select = document.getElementById('supervisor_id');
         select.innerHTML = '<option value="">Selecione o supervisor...</option>';
         
-        supervisores.forEach(supervisor => {
+        (data || []).forEach(supervisor => {
             const option = document.createElement('option');
             option.value = supervisor.id;
             option.textContent = supervisor.nome;
             select.appendChild(option);
         });
         
-        console.log(`✅ ${supervisores.length} supervisores carregados no select`);
+        console.log('✅ Supervisores carregados:', data?.length || 0);
         
     } catch (error) {
         console.error('❌ Erro ao carregar supervisores:', error);
-        alert('Erro ao carregar supervisores. Verifique o console.');
     }
 }
 
@@ -309,25 +313,29 @@ async function carregarEncarregados() {
     }
     
     try {
-        console.log('🔍 Carregando encarregados do supervisor:', supervisorId);
+        const { data, error } = await window.supabase
+            .from('colaboradores')
+            .select('id, nome')
+            .eq('supervisor_id', supervisorId)
+            .eq('funcao', 'encarregado')
+            .eq('ativo', true)
+            .order('nome');
         
-        // ✅ USAR FUNÇÃO DO DATABASE.JS
-        const encarregados = await window.DB.getEncarregadosBySupervisor(supervisorId);
+        if (error) throw error;
         
         selectEncarregado.innerHTML = '<option value="">Selecione o encarregado...</option>';
         
-        encarregados.forEach(encarregado => {
+        (data || []).forEach(encarregado => {
             const option = document.createElement('option');
             option.value = encarregado.id;
             option.textContent = encarregado.nome;
             selectEncarregado.appendChild(option);
         });
         
-        console.log(`✅ ${encarregados.length} encarregados carregados no select`);
+        console.log('✅ Encarregados carregados:', data?.length || 0);
         
     } catch (error) {
         console.error('❌ Erro ao carregar encarregados:', error);
-        alert('Erro ao carregar encarregados. Verifique o console.');
     }
 }
 
@@ -340,40 +348,49 @@ async function carregarEquipe() {
     const container = document.getElementById('equipe-container');
     
     if (!encarregadoId) {
-        container.innerHTML = '<p style="color: #999; font-style: italic;">Selecione um encarregado para carregar a equipe...</p>';
+        container.innerHTML = '<p class="text-muted">Selecione um encarregado para carregar a equipe</p>';
         APP_STATE.equipe = [];
         return;
     }
     
     try {
-        console.log('🔍 Carregando equipe do encarregado:', encarregadoId);
+        // Buscar equipe
+        const { data: equipe, error: equipeError } = await window.supabase
+            .from('equipes')
+            .select('id')
+            .eq('lider_equipe', encarregadoId)
+            .eq('ativo', true)
+            .single();
         
-        // ✅ USAR FUNÇÃO DO DATABASE.JS
-        const colaboradores = await window.DB.getEquipeByEncarregado(encarregadoId);
-        
-        if (!colaboradores || colaboradores.length === 0) {
-            container.innerHTML = '<p style="color: #dc3545;">Nenhuma equipe encontrada para este encarregado</p>';
+        if (equipeError || !equipe) {
+            container.innerHTML = '<p class="text-danger">Nenhuma equipe encontrada para este encarregado</p>';
             APP_STATE.equipe = [];
             return;
         }
         
-        // Mapear para o formato do APP_STATE
-        APP_STATE.equipe = colaboradores.map(colab => ({
-            id: colab.id,
-            nome: colab.nome,
-            cpf: colab.cpf,
-            funcao: colab.funcao,
+        // Buscar membros
+        const { data: membros, error: membrosError } = await window.supabase
+            .from('equipes_colaboradores')
+            .select(`
+                colaborador_id,
+                colaboradores(id, nome, funcao, nfc_tag_id, foto_base64, assinatura_base64)
+            `)
+            .eq('equipe_id', equipe.id);
+        
+        if (membrosError) throw membrosError;
+        
+        APP_STATE.equipe = (membros || []).map(m => ({
+            ...m.colaboradores,
             rdoStatus: null,
             confirmado: false
         }));
         
         renderizarEquipe();
-        console.log(`✅ ${APP_STATE.equipe.length} colaboradores carregados na equipe`);
+        console.log('✅ Equipe carregada:', APP_STATE.equipe.length, 'colaboradores');
         
     } catch (error) {
         console.error('❌ Erro ao carregar equipe:', error);
-        container.innerHTML = '<p style="color: #dc3545;">Erro ao carregar equipe</p>';
-        alert('Erro ao carregar equipe. Verifique o console.');
+        container.innerHTML = '<p class="text-danger">Erro ao carregar equipe</p>';
     }
 }
 

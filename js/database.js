@@ -1,5 +1,7 @@
 /* ============================================================================
-   RDO FIDEL - DATABASE (Supabase) - CORRIGIDO
+   RDO FIDEL - DATABASE (Supabase) - VERSÃO ADAPTADA
+   ============================================================================
+   Mantém compatibilidade com LOGIN + Adiciona funções para RDO
    ============================================================================ */
 
 // Inicializar cliente Supabase
@@ -204,6 +206,174 @@ async function getUltimoRDO(obraId) {
     return rdos && rdos.length > 0 ? rdos[0] : null;
 }
 
+/* ============================================================================
+   🆕 FUNÇÕES PARA RDO - SUPERVISORES, ENCARREGADOS E EQUIPE
+   ============================================================================ */
+
+/**
+ * Buscar supervisores de uma obra
+ * @param {string} obraId - ID da obra
+ * @returns {Array} Lista de supervisores
+ */
+async function getSupervisoresByObra(obraId) {
+    try {
+        console.log('🔍 Buscando supervisores da obra:', obraId);
+        
+        const { data, error } = await supabaseClient
+            .from('colaboradores')
+            .select('id, nome, cpf, funcao')
+            .eq('obra_id', obraId)
+            .eq('funcao', 'supervisor')
+            .eq('ativo', true)
+            .order('nome');
+        
+        if (error) {
+            console.error('❌ Erro ao buscar supervisores:', error);
+            throw error;
+        }
+        
+        console.log(`✅ Supervisores carregados: ${data.length}`);
+        return data;
+        
+    } catch (error) {
+        console.error('Erro em getSupervisoresByObra:', error);
+        throw error;
+    }
+}
+
+/**
+ * Buscar encarregados de um supervisor
+ * @param {string} supervisorId - ID do supervisor
+ * @returns {Array} Lista de encarregados
+ */
+async function getEncarregadosBySupervisor(supervisorId) {
+    try {
+        console.log('🔍 Buscando encarregados do supervisor:', supervisorId);
+        
+        const { data, error } = await supabaseClient
+            .from('colaboradores')
+            .select('id, nome, cpf, funcao')
+            .eq('supervisor_id', supervisorId)
+            .eq('funcao', 'encarregado')
+            .eq('ativo', true)
+            .order('nome');
+        
+        if (error) {
+            console.error('❌ Erro ao buscar encarregados:', error);
+            throw error;
+        }
+        
+        console.log(`✅ Encarregados carregados: ${data.length}`);
+        return data;
+        
+    } catch (error) {
+        console.error('Erro em getEncarregadosBySupervisor:', error);
+        throw error;
+    }
+}
+
+/**
+ * Buscar equipe de um encarregado
+ * @param {string} encarregadoId - ID do encarregado
+ * @returns {Array} Lista de colaboradores da equipe
+ */
+async function getEquipeByEncarregado(encarregadoId) {
+    try {
+        console.log('🔍 Buscando equipe do encarregado:', encarregadoId);
+        
+        // Primeiro buscar a equipe liderada pelo encarregado
+        const { data: equipe, error: equipeError } = await supabaseClient
+            .from('equipes')
+            .select('id, nome')
+            .eq('lider_equipe', encarregadoId)
+            .eq('ativo', true)
+            .single();
+        
+        if (equipeError) {
+            console.error('❌ Erro ao buscar equipe:', equipeError);
+            throw equipeError;
+        }
+        
+        if (!equipe) {
+            console.log('⚠️ Nenhuma equipe encontrada para este encarregado');
+            return [];
+        }
+        
+        console.log(`✅ Equipe encontrada: ${equipe.nome}`);
+        
+        // Buscar colaboradores da equipe
+        const { data: vinculos, error: vinculosError } = await supabaseClient
+            .from('equipes_colaboradores')
+            .select(`
+                colaborador_id,
+                colaboradores (
+                    id,
+                    nome,
+                    cpf,
+                    funcao
+                )
+            `)
+            .eq('equipe_id', equipe.id);
+        
+        if (vinculosError) {
+            console.error('❌ Erro ao buscar colaboradores:', vinculosError);
+            throw vinculosError;
+        }
+        
+        // Mapear para retornar apenas os colaboradores
+        const colaboradores = vinculos.map(v => v.colaboradores).filter(c => c !== null);
+        
+        console.log(`✅ Colaboradores da equipe: ${colaboradores.length}`);
+        return colaboradores;
+        
+    } catch (error) {
+        console.error('Erro em getEquipeByEncarregado:', error);
+        throw error;
+    }
+}
+
+/**
+ * Buscar equipe diretamente pelo ID da equipe
+ * @param {string} equipeId - ID da equipe
+ * @returns {Array} Lista de colaboradores da equipe
+ */
+async function getColaboradoresByEquipe(equipeId) {
+    try {
+        console.log('🔍 Buscando colaboradores da equipe:', equipeId);
+        
+        const { data: vinculos, error } = await supabaseClient
+            .from('equipes_colaboradores')
+            .select(`
+                colaborador_id,
+                colaboradores (
+                    id,
+                    nome,
+                    cpf,
+                    funcao
+                )
+            `)
+            .eq('equipe_id', equipeId);
+        
+        if (error) {
+            console.error('❌ Erro ao buscar colaboradores:', error);
+            throw error;
+        }
+        
+        const colaboradores = vinculos.map(v => v.colaboradores).filter(c => c !== null);
+        
+        console.log(`✅ Colaboradores da equipe: ${colaboradores.length}`);
+        return colaboradores;
+        
+    } catch (error) {
+        console.error('Erro em getColaboradoresByEquipe:', error);
+        throw error;
+    }
+}
+
+/* ============================================================================
+   OUTRAS FUNÇÕES
+   ============================================================================ */
+
 /**
  * Upload de arquivo para Storage
  */
@@ -248,7 +418,7 @@ async function testarConexao() {
             console.log('✅ Conexão com banco OK! Obra encontrada:', obras[0].nome);
             return true;
         } else {
-            console.log('⚠️  Banco vazio ou sem permissão');
+            console.log('⚠️ Banco vazio ou sem permissão');
             return false;
         }
         
@@ -276,7 +446,12 @@ window.DB = {
     getRDOsByObra,
     getUltimoRDO,
     uploadFile,
-    testarConexao
+    testarConexao,
+    // 🆕 Funções para RDO
+    getSupervisoresByObra,
+    getEncarregadosBySupervisor,
+    getEquipeByEncarregado,
+    getColaboradoresByEquipe
 };
 
-console.log('✅ Database.js carregado (versão corrigida)');
+console.log('✅ Database.js carregado (versão adaptada com funções de RDO)');

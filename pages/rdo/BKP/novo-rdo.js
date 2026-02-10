@@ -1,669 +1,639 @@
-/* ============================================================================
-   NOVO-RDO.JS - Formulário de Novo RDO
-   ============================================================================ */
+/* ========== NOVO RDO - JAVASCRIPT ========== */
 
-// Variáveis globais
-let obras = [];
-let colaboradores = [];
-let atividades = [];
-let equipamentos = [];
+let obras = [], colaboradores = [], atividades = [], equipeLista = [];
+let rdoNumero = '', fotosRDO = [], ocorrencias = [];
+let signaturePad = null;
 
-// Arrays para armazenar itens adicionados
-let colaboradoresRDO = [];
-let atividadesRDO = [];
-let equipamentosRDO = [];
-
-// Verificar autenticação e carregar dados
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('📝 Formulário de RDO carregando...');
+    console.log('📝 Novo RDO iniciando...');
     
-    // Verificar autenticação
     const session = await AUTH.checkAuth();
     if (!session) {
         window.location.href = '../login.html';
         return;
     }
     
-    // Configurar event listeners
-    setupEventListeners();
+    document.getElementById('user-name').textContent = session.user.email.split('@')[0];
     
-    // Carregar dados
-    await loadInitialData();
+    setupEvents();
+    setupSignaturePad();
+    setupPhotoUpload();
+    preencherDataHoje();
+    await carregarDados();
     
-    // Definir data atual
-    document.getElementById('rdo-data').valueAsDate = new Date();
-    updateDiaSemana();
-    
-    console.log('✅ Formulário de RDO carregado!');
+    console.log('✅ RDO pronto!');
 });
 
-/* ============================================================================
-   CARREGAR DADOS INICIAIS
-   ============================================================================ */
-async function loadInitialData() {
+function setupEvents() {
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+        if (confirm('Sair?')) await AUTH.logout();
+    });
+    
+    document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar')?.classList.toggle('mobile-open');
+    });
+    
+    document.getElementById('form-rdo').addEventListener('submit', salvarRDO);
+    document.getElementById('obra_id').addEventListener('change', async () => {
+        await gerarNumeroRDO();
+        await carregarAtividades();
+    });
+    
+    document.querySelectorAll('input[name="teve_pts"]').forEach(radio => {
+        radio.addEventListener('change', togglePTS);
+    });
+    
+    document.getElementById('encarregado_id').addEventListener('change', carregarEquipe);
+    document.getElementById('btn-add-ocorrencia').addEventListener('click', adicionarOcorrencia);
+    document.getElementById('btn-limpar-assinatura').addEventListener('click', limparAssinatura);
+    
+    document.getElementById('data').addEventListener('change', (e) => {
+        const data = new Date(e.target.value + 'T00:00:00');
+        atualizarBadgeData(data);
+    });
+}
+
+/* ========== DATA ========== */
+function preencherDataHoje() {
+    const hoje = new Date();
+    const dataISO = hoje.toISOString().split('T')[0];
+    document.getElementById('data').value = dataISO;
+    atualizarBadgeData(hoje);
+}
+
+function atualizarBadgeData(data) {
+    const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const dia = dias[data.getDay()];
+    const fmt = data.toLocaleDateString('pt-BR');
+    document.getElementById('rdo-data-badge').textContent = `${dia}, ${fmt}`;
+}
+
+/* ========== AUTO-NUMERAÇÃO (8 DÍGITOS) ========== */
+async function gerarNumeroRDO() {
+    const obraId = document.getElementById('obra_id').value;
+    if (!obraId) {
+        document.getElementById('rdo-numero').textContent = '00000000';
+        return;
+    }
+    
     try {
-        UTILS.showLoading();
+        const ultimosRDOs = await DB.fetchData('rdos', { obra_id: obraId }, 'numero', {
+            order: { column: 'numero', ascending: false },
+            limit: 1
+        });
         
-        // Carregar obras
+        let proximoNum = 1;
+        if (ultimosRDOs && ultimosRDOs.length > 0) {
+            proximoNum = parseInt(ultimosRDOs[0].numero) + 1;
+        }
+        
+        rdoNumero = proximoNum.toString().padStart(8, '0');
+        document.getElementById('rdo-numero').textContent = rdoNumero;
+        console.log('✅ RDO Nº:', rdoNumero);
+        
+    } catch (error) {
+        console.error('Erro ao gerar número:', error);
+        rdoNumero = '00000001';
+        document.getElementById('rdo-numero').textContent = rdoNumero;
+    }
+}
+
+/* ========== CARREGAR DADOS ========== */
+async function carregarDados() {
+    try {
         obras = await DB.getObras(true);
-        const selectObra = document.getElementById('rdo-obra');
-        obras.forEach(obra => {
-            const option = document.createElement('option');
-            option.value = obra.id;
-            option.textContent = obra.nome;
-            selectObra.appendChild(option);
+        const selectObra = document.getElementById('obra_id');
+        obras.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.id;
+            opt.textContent = o.nome;
+            selectObra.appendChild(opt);
         });
         
-        // Carregar colaboradores
         colaboradores = await DB.getColaboradores(true);
-        const selectColaborador = document.getElementById('select-colaborador');
-        colaboradores.forEach(colab => {
-            const option = document.createElement('option');
-            option.value = colab.id;
-            option.textContent = `${colab.nome} - ${colab.funcao}`;
-            selectColaborador.appendChild(option);
+        const funcoesLider = ['engenheiro', 'mestre', 'encarregado'];
+        const encarregados = colaboradores.filter(c => funcoesLider.includes(c.funcao));
+        
+        const selectEnc = document.getElementById('encarregado_id');
+        encarregados.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e.id;
+            opt.textContent = `${e.nome} (${cap(e.funcao)})`;
+            selectEnc.appendChild(opt);
         });
         
-        // Carregar equipamentos
-        equipamentos = await DB.fetchData('equipamentos', { ativo: true });
-        const selectEquipamento = document.getElementById('select-equipamento');
-        equipamentos.forEach(equip => {
-            const option = document.createElement('option');
-            option.value = equip.id;
-            option.textContent = equip.nome;
-            selectEquipamento.appendChild(option);
-        });
-        
-        console.log('✅ Dados carregados:', {
-            obras: obras.length,
-            colaboradores: colaboradores.length,
-            equipamentos: equipamentos.length
-        });
+        console.log(`✅ ${obras.length} obras, ${colaboradores.length} colaboradores`);
         
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
-        UTILS.showError('Erro ao carregar dados iniciais');
-    } finally {
-        UTILS.hideLoading();
     }
 }
 
-/* ============================================================================
-   EVENT LISTENERS
-   ============================================================================ */
-function setupEventListeners() {
-    // Logout
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-        if (confirm('Deseja realmente sair?')) {
-            await AUTH.logout();
-        }
-    });
+async function carregarAtividades() {
+    const obraId = document.getElementById('obra_id').value;
+    if (!obraId) return;
     
-    // Menu mobile
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-    const sidebar = document.getElementById('sidebar');
-    
-    if (mobileMenuToggle) {
-        mobileMenuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('mobile-open');
-        });
-    }
-    
-    // Obra selecionada - carregar atividades
-    document.getElementById('rdo-obra').addEventListener('change', async (e) => {
-        const obraId = e.target.value;
-        if (obraId) {
-            await loadAtividades(obraId);
-        }
-    });
-    
-    // Data alterada - atualizar dia da semana
-    document.getElementById('rdo-data').addEventListener('change', () => {
-        updateDiaSemana();
-    });
-    
-    // PTS - mostrar/ocultar campo número
-    document.getElementById('rdo-teve-pts').addEventListener('change', (e) => {
-        const grupoPTS = document.getElementById('grupo-pts');
-        grupoPTS.style.display = e.target.value === 'true' ? 'block' : 'none';
-    });
-    
-    // Botões adicionar
-    document.getElementById('btn-adicionar-colaborador').addEventListener('click', () => {
-        abrirModalColaborador();
-    });
-    
-    document.getElementById('btn-adicionar-atividade').addEventListener('click', () => {
-        abrirModalAtividade();
-    });
-    
-    document.getElementById('btn-adicionar-equipamento').addEventListener('click', () => {
-        abrirModalEquipamento();
-    });
-    
-    // Modais - Colaborador
-    document.getElementById('btn-close-colaborador').addEventListener('click', () => {
-        fecharModal('modal-colaborador');
-    });
-    
-    document.getElementById('btn-cancel-colaborador').addEventListener('click', () => {
-        fecharModal('modal-colaborador');
-    });
-    
-    document.getElementById('btn-confirmar-colaborador').addEventListener('click', () => {
-        adicionarColaborador();
-    });
-    
-    // Modais - Atividade
-    document.getElementById('btn-close-atividade').addEventListener('click', () => {
-        fecharModal('modal-atividade');
-    });
-    
-    document.getElementById('btn-cancel-atividade').addEventListener('click', () => {
-        fecharModal('modal-atividade');
-    });
-    
-    document.getElementById('btn-confirmar-atividade').addEventListener('click', () => {
-        adicionarAtividade();
-    });
-    
-    // Modais - Equipamento
-    document.getElementById('btn-close-equipamento').addEventListener('click', () => {
-        fecharModal('modal-equipamento');
-    });
-    
-    document.getElementById('btn-cancel-equipamento').addEventListener('click', () => {
-        fecharModal('modal-equipamento');
-    });
-    
-    document.getElementById('btn-confirmar-equipamento').addEventListener('click', () => {
-        adicionarEquipamento();
-    });
-    
-    // Submit form
-    document.getElementById('form-rdo').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await salvarRDO();
-    });
-    
-    document.getElementById('btn-salvar-rdo').addEventListener('click', async (e) => {
-        e.preventDefault();
-        await salvarRDO();
-    });
-}
-
-/* ============================================================================
-   CARREGAR ATIVIDADES DA OBRA
-   ============================================================================ */
-async function loadAtividades(obraId) {
     try {
         atividades = await DB.getAtividadesByObra(obraId);
-        
-        const selectAtividade = document.getElementById('select-atividade');
-        selectAtividade.innerHTML = '<option value="">Selecione...</option>';
-        
-        atividades.forEach(ativ => {
-            const option = document.createElement('option');
-            option.value = ativ.id;
-            option.textContent = ativ.nome;
-            selectAtividade.appendChild(option);
-        });
-        
-        console.log(`✅ ${atividades.length} atividades carregadas para a obra`);
-        
+        console.log(`✅ ${atividades.length} atividades`);
     } catch (error) {
         console.error('Erro ao carregar atividades:', error);
     }
 }
 
-/* ============================================================================
-   ATUALIZAR DIA DA SEMANA
-   ============================================================================ */
-function updateDiaSemana() {
-    const dataInput = document.getElementById('rdo-data');
-    const diaSemanaInput = document.getElementById('rdo-dia-semana');
+/* ========== PTS ========== */
+function togglePTS() {
+    const tevePTS = document.querySelector('input[name="teve_pts"]:checked')?.value;
+    const group = document.getElementById('atividade-pts-group');
+    const campo = document.getElementById('atividade_pts');
     
-    if (dataInput.value) {
-        const data = new Date(dataInput.value + 'T00:00:00');
-        const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-        diaSemanaInput.value = dias[data.getDay()];
+    if (tevePTS === 'sim') {
+        group.style.display = 'block';
+        campo.required = true;
+    } else {
+        group.style.display = 'none';
+        campo.required = false;
+        campo.value = '';
     }
 }
 
-/* ============================================================================
-   MODAIS
-   ============================================================================ */
-function abrirModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function fecharModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.classList.remove('show');
-    document.body.style.overflow = '';
-}
-
-function abrirModalColaborador() {
-    abrirModal('modal-colaborador');
-}
-
-function abrirModalAtividade() {
-    if (!atividades || atividades.length === 0) {
-        UTILS.showWarning('Selecione uma obra primeiro para carregar as atividades');
-        return;
-    }
-    abrirModal('modal-atividade');
-}
-
-function abrirModalEquipamento() {
-    abrirModal('modal-equipamento');
-}
-
-/* ============================================================================
-   ADICIONAR COLABORADOR
-   ============================================================================ */
-function adicionarColaborador() {
-    const colaboradorId = document.getElementById('select-colaborador').value;
-    const horas = parseFloat(document.getElementById('colaborador-horas').value);
-    const status = document.getElementById('colaborador-status').value;
-    
-    if (!colaboradorId) {
-        UTILS.showWarning('Selecione um colaborador');
+/* ========== EQUIPE ========== */
+async function carregarEquipe() {
+    const encarregadoId = document.getElementById('encarregado_id').value;
+    if (!encarregadoId) {
+        document.getElementById('equipe-container').innerHTML = '<p style="color: #999; font-style: italic;">Selecione um encarregado...</p>';
         return;
     }
     
-    // Verificar se já foi adicionado
-    if (colaboradoresRDO.find(c => c.colaborador_id === colaboradorId)) {
-        UTILS.showWarning('Este colaborador já foi adicionado');
-        return;
-    }
-    
-    const colaborador = colaboradores.find(c => c.id === colaboradorId);
-    
-    colaboradoresRDO.push({
-        colaborador_id: colaboradorId,
-        nome: colaborador.nome,
-        funcao: colaborador.funcao,
-        horas_trabalhadas: horas,
-        status: status
-    });
-    
-    renderColaboradores();
-    fecharModal('modal-colaborador');
-    
-    // Resetar form
-    document.getElementById('select-colaborador').value = '';
-    document.getElementById('colaborador-horas').value = '8';
-    document.getElementById('colaborador-status').value = 'presente';
-}
-
-function renderColaboradores() {
-    const lista = document.getElementById('lista-colaboradores');
-    
-    if (colaboradoresRDO.length === 0) {
-        lista.innerHTML = '<p class="text-muted">Nenhum colaborador adicionado</p>';
-        document.getElementById('total-hh').textContent = '0';
-        return;
-    }
-    
-    let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Nome</th><th>Função</th><th>Horas</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
-    
-    let totalHH = 0;
-    
-    colaboradoresRDO.forEach((colab, index) => {
-        totalHH += colab.horas_trabalhadas;
-        
-        const statusBadge = getStatusBadge(colab.status);
-        
-        html += `
-            <tr>
-                <td>${colab.nome}</td>
-                <td>${colab.funcao}</td>
-                <td>${colab.horas_trabalhadas}h</td>
-                <td>${statusBadge}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removerColaborador(${index})">
-                        🗑️
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table></div>';
-    lista.innerHTML = html;
-    
-    document.getElementById('total-hh').textContent = totalHH.toFixed(1);
-}
-
-function getStatusBadge(status) {
-    const badges = {
-        'presente': '<span class="badge badge-success">Presente</span>',
-        'falta': '<span class="badge badge-danger">Falta</span>',
-        'atrasado': '<span class="badge badge-warning">Atrasado</span>',
-        'doente': '<span class="badge badge-info">Doente</span>'
-    };
-    return badges[status] || status;
-}
-
-function removerColaborador(index) {
-    colaboradoresRDO.splice(index, 1);
-    renderColaboradores();
-}
-
-/* ============================================================================
-   ADICIONAR ATIVIDADE
-   ============================================================================ */
-function adicionarAtividade() {
-    const atividadeId = document.getElementById('select-atividade').value;
-    const status = document.getElementById('atividade-status').value;
-    const percentual = parseFloat(document.getElementById('atividade-percentual').value) || 0;
-    const observacoes = document.getElementById('atividade-obs').value.trim();
-    
-    if (!atividadeId) {
-        UTILS.showWarning('Selecione uma atividade');
-        return;
-    }
-    
-    // Verificar se já foi adicionada
-    if (atividadesRDO.find(a => a.atividade_id === atividadeId)) {
-        UTILS.showWarning('Esta atividade já foi adicionada');
-        return;
-    }
-    
-    const atividade = atividades.find(a => a.id === atividadeId);
-    
-    atividadesRDO.push({
-        atividade_id: atividadeId,
-        nome: atividade.nome,
-        status: status,
-        percentual_conclusao: percentual,
-        observacoes: observacoes
-    });
-    
-    renderAtividades();
-    fecharModal('modal-atividade');
-    
-    // Resetar form
-    document.getElementById('select-atividade').value = '';
-    document.getElementById('atividade-status').value = 'planejada';
-    document.getElementById('atividade-percentual').value = '0';
-    document.getElementById('atividade-obs').value = '';
-}
-
-function renderAtividades() {
-    const lista = document.getElementById('lista-atividades');
-    
-    if (atividadesRDO.length === 0) {
-        lista.innerHTML = '<p class="text-muted">Nenhuma atividade adicionada</p>';
-        return;
-    }
-    
-    let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Atividade</th><th>Status</th><th>% Conclusão</th><th>Observações</th><th>Ações</th></tr></thead><tbody>';
-    
-    atividadesRDO.forEach((ativ, index) => {
-        const statusBadge = getAtividadeStatusBadge(ativ.status);
-        
-        html += `
-            <tr>
-                <td>${ativ.nome}</td>
-                <td>${statusBadge}</td>
-                <td>${ativ.percentual_conclusao}%</td>
-                <td>${ativ.observacoes || '-'}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removerAtividade(${index})">
-                        🗑️
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table></div>';
-    lista.innerHTML = html;
-}
-
-function getAtividadeStatusBadge(status) {
-    const badges = {
-        'planejada': '<span class="badge badge-secondary">Planejada</span>',
-        'em_execucao': '<span class="badge badge-warning">Em Execução</span>',
-        'concluida': '<span class="badge badge-success">Concluída</span>',
-        'paralisada': '<span class="badge badge-danger">Paralisada</span>'
-    };
-    return badges[status] || status;
-}
-
-function removerAtividade(index) {
-    atividadesRDO.splice(index, 1);
-    renderAtividades();
-}
-
-/* ============================================================================
-   ADICIONAR EQUIPAMENTO
-   ============================================================================ */
-function adicionarEquipamento() {
-    const equipamentoId = document.getElementById('select-equipamento').value;
-    const horas = parseFloat(document.getElementById('equipamento-horas').value);
-    const horimetroInicial = parseFloat(document.getElementById('equipamento-horimetro-inicial').value) || null;
-    const horimetroFinal = parseFloat(document.getElementById('equipamento-horimetro-final').value) || null;
-    
-    if (!equipamentoId) {
-        UTILS.showWarning('Selecione um equipamento');
-        return;
-    }
-    
-    // Verificar se já foi adicionado
-    if (equipamentosRDO.find(e => e.equipamento_id === equipamentoId)) {
-        UTILS.showWarning('Este equipamento já foi adicionado');
-        return;
-    }
-    
-    const equipamento = equipamentos.find(e => e.id === equipamentoId);
-    
-    equipamentosRDO.push({
-        equipamento_id: equipamentoId,
-        nome: equipamento.nome,
-        horas_trabalhadas: horas,
-        horimetro_inicial: horimetroInicial,
-        horimetro_final: horimetroFinal
-    });
-    
-    renderEquipamentos();
-    fecharModal('modal-equipamento');
-    
-    // Resetar form
-    document.getElementById('select-equipamento').value = '';
-    document.getElementById('equipamento-horas').value = '8';
-    document.getElementById('equipamento-horimetro-inicial').value = '';
-    document.getElementById('equipamento-horimetro-final').value = '';
-}
-
-function renderEquipamentos() {
-    const lista = document.getElementById('lista-equipamentos');
-    
-    if (equipamentosRDO.length === 0) {
-        lista.innerHTML = '<p class="text-muted">Nenhum equipamento adicionado</p>';
-        return;
-    }
-    
-    let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Equipamento</th><th>Horas</th><th>Horímetro Inicial</th><th>Horímetro Final</th><th>Ações</th></tr></thead><tbody>';
-    
-    equipamentosRDO.forEach((equip, index) => {
-        html += `
-            <tr>
-                <td>${equip.nome}</td>
-                <td>${equip.horas_trabalhadas}h</td>
-                <td>${equip.horimetro_inicial !== null ? equip.horimetro_inicial.toFixed(1) : '-'}</td>
-                <td>${equip.horimetro_final !== null ? equip.horimetro_final.toFixed(1) : '-'}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removerEquipamento(${index})">
-                        🗑️
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table></div>';
-    lista.innerHTML = html;
-}
-
-function removerEquipamento(index) {
-    equipamentosRDO.splice(index, 1);
-    renderEquipamentos();
-}
-
-/* ============================================================================
-   SALVAR RDO
-   ============================================================================ */
-async function salvarRDO() {
     try {
-        // Validar campos obrigatórios
-        const obraId = document.getElementById('rdo-obra').value;
-        const data = document.getElementById('rdo-data').value;
+        let equipes = await DB.fetchData('equipes', { lider_equipe: encarregadoId }, '*');
         
-        if (!obraId || !data) {
-            UTILS.showError('Preencha todos os campos obrigatórios (Obra e Data)');
-            return;
+        if (equipes && equipes.length > 0) {
+            const equipeId = equipes[0].id;
+            const equipesColabs = await DB.fetchData('equipes_colaboradores', { equipe_id: equipeId }, '*');
+            const colabIds = equipesColabs.map(ec => ec.colaborador_id);
+            equipeLista = colaboradores.filter(c => colabIds.includes(c.id));
+        } else {
+            equipeLista = colaboradores.filter(c => c.id !== encarregadoId);
         }
         
+        renderEquipe();
+        console.log(`✅ Equipe: ${equipeLista.length} colaboradores`);
+        
+    } catch (error) {
+        console.error('Erro ao carregar equipe:', error);
+        equipeLista = colaboradores.filter(c => c.id !== encarregadoId);
+        renderEquipe();
+    }
+}
+
+function renderEquipe() {
+    const container = document.getElementById('equipe-container');
+    
+    if (equipeLista.length === 0) {
+        container.innerHTML = '<p style="color: #dc3545;">Nenhum colaborador encontrado</p>';
+        return;
+    }
+    
+    container.innerHTML = `<p><strong>Equipe (${equipeLista.length}):</strong></p>`;
+    
+    equipeLista.forEach((c, i) => {
+        const div = document.createElement('div');
+        div.className = 'colab-row';
+        div.id = `colab-${i}`;
+        div.innerHTML = `
+            <div>
+                <strong>${c.nome}</strong><br>
+                <small style="color: #666;">${cap(c.funcao)}</small>
+            </div>
+            <div>
+                <select class="form-control form-control-sm" data-colab="${i}" data-field="status">
+                    <option value="presente">✅ Presente</option>
+                    <option value="ausente">❌ Ausente</option>
+                    <option value="atrasado">⏰ Atrasado</option>
+                    <option value="transferido">🔄 Transferido</option>
+                    <option value="emprestado">🤝 Emprestado</option>
+                </select>
+            </div>
+            <div id="atividades-${i}">
+                <div class="atividade-mini">
+                    <select class="form-control form-control-sm" style="flex: 1;">
+                        <option value="">Atividade...</option>
+                        ${atividades.map(a => `<option value="${a.id}">${a.nome}</option>`).join('')}
+                    </select>
+                    <input type="number" class="form-control form-control-sm" placeholder="HH" style="width: 60px;" step="0.5" min="0" max="24">
+                </div>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-success" onclick="addAtividade(${i})">+ HH</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+    
+    equipeLista.forEach((c, i) => {
+        c.status = 'presente';
+        c.atividades = [];
+    });
+}
+
+function addAtividade(index) {
+    const container = document.getElementById(`atividades-${index}`);
+    const div = document.createElement('div');
+    div.className = 'atividade-mini';
+    div.innerHTML = `
+        <select class="form-control form-control-sm" style="flex: 1;">
+            <option value="">Atividade...</option>
+            ${atividades.map(a => `<option value="${a.id}">${a.nome}</option>`).join('')}
+        </select>
+        <input type="number" class="form-control form-control-sm" placeholder="HH" style="width: 60px;" step="0.5" min="0" max="24">
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(div);
+}
+
+/* ========== OCORRÊNCIAS ========== */
+let ocorrenciaId = 0;
+
+function adicionarOcorrencia() {
+    if (equipeLista.length === 0) {
+        alert('Selecione um encarregado primeiro!');
+        return;
+    }
+    
+    const id = ocorrenciaId++;
+    const container = document.getElementById('ocorrencias-container');
+    
+    const div = document.createElement('div');
+    div.className = 'section-card';
+    div.style.marginBottom = '15px';
+    div.innerHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <h4>Ocorrência #${id + 1}</h4>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removerOcorrencia(${id})">🗑️</button>
+        </div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select class="form-control" id="ocorr-tipo-${id}">
+                <option value="ocorrencia">Ocorrência</option>
+                <option value="interferencia">Interferência</option>
+                <option value="paralisacao">Paralisação</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Descrição</label>
+            <textarea class="form-control" id="ocorr-desc-${id}" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Colaboradores Afetados:</label>
+            <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+                ${equipeLista.map((c, i) => `
+                    <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                        <input type="checkbox" id="ocorr-${id}-c-${i}" value="${c.id}">
+                        <label for="ocorr-${id}-c-${i}" style="flex: 1;">${c.nome}</label>
+                        <input type="number" class="form-control form-control-sm" id="ocorr-${id}-hh-${i}" placeholder="HH" style="width: 80px;" step="0.5" min="0" max="24">
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Fotos:</label>
+            <div class="upload-area" onclick="document.getElementById('ocorr-foto-${id}').click()">
+                <input type="file" id="ocorr-foto-${id}" accept="image/*" multiple style="display: none;">
+                <p>📷 Adicionar fotos</p>
+            </div>
+            <div class="photo-grid" id="ocorr-fotos-${id}"></div>
+        </div>
+    `;
+    
+    container.appendChild(div);
+    
+    document.getElementById(`ocorr-foto-${id}`).addEventListener('change', (e) => {
+        handleOcorrenciaFotos(e, id);
+    });
+    
+    ocorrencias.push({ id, fotos: [] });
+}
+
+function removerOcorrencia(id) {
+    event.target.closest('.section-card').remove();
+    const idx = ocorrencias.findIndex(o => o.id === id);
+    if (idx > -1) ocorrencias.splice(idx, 1);
+}
+
+async function handleOcorrenciaFotos(event, ocorrId) {
+    const files = event.target.files;
+    const ocorr = ocorrencias.find(o => o.id === ocorrId);
+    if (!ocorr) return;
+    
+    for (let file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) {
+            alert(`${file.name} > 5MB`);
+            continue;
+        }
+        
+        const base64 = await fileToBase64(file);
+        ocorr.fotos.push(base64);
+    }
+    
+    renderOcorrenciaFotos(ocorrId);
+}
+
+function renderOcorrenciaFotos(ocorrId) {
+    const ocorr = ocorrencias.find(o => o.id === ocorrId);
+    if (!ocorr) return;
+    
+    const grid = document.getElementById(`ocorr-fotos-${ocorrId}`);
+    grid.innerHTML = '';
+    
+    ocorr.fotos.forEach((foto, i) => {
+        const tipo = document.getElementById(`ocorr-tipo-${ocorrId}`).value;
+        const nome = `${rdoNumero}_${tipo}_${(i + 1).toString().padStart(4, '0')}.jpg`;
+        
+        const div = document.createElement('div');
+        div.className = 'photo-item';
+        div.innerHTML = `
+            <img src="${foto}" alt="Foto">
+            <button class="photo-remove" onclick="removerOcorrFoto(${ocorrId}, ${i})" type="button">×</button>
+            <div class="photo-label">${nome}</div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+function removerOcorrFoto(ocorrId, idx) {
+    const ocorr = ocorrencias.find(o => o.id === ocorrId);
+    if (!ocorr) return;
+    ocorr.fotos.splice(idx, 1);
+    renderOcorrenciaFotos(ocorrId);
+}
+
+/* ========== FOTOS RDO ========== */
+function setupPhotoUpload() {
+    const area = document.getElementById('upload-area-rdo');
+    const input = document.getElementById('foto-input-rdo');
+    
+    area.addEventListener('click', () => input.click());
+    input.addEventListener('change', handleFotosRDO);
+    
+    area.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        area.style.borderColor = '#007bff';
+    });
+    area.addEventListener('dragleave', () => {
+        area.style.borderColor = '#ddd';
+    });
+    area.addEventListener('drop', (e) => {
+        e.preventDefault();
+        area.style.borderColor = '#ddd';
+        handleFotosRDOFiles(e.dataTransfer.files);
+    });
+}
+
+async function handleFotosRDO(e) {
+    await handleFotosRDOFiles(e.target.files);
+}
+
+async function handleFotosRDOFiles(files) {
+    for (let file of files) {
+        if (!file.type.startsWith('image/')) {
+            alert(`${file.name} não é imagem`);
+            continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert(`${file.name} > 5MB`);
+            continue;
+        }
+        
+        const base64 = await fileToBase64(file);
+        fotosRDO.push(base64);
+    }
+    
+    renderFotosRDO();
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderFotosRDO() {
+    const grid = document.getElementById('fotos-rdo-grid');
+    grid.innerHTML = '';
+    
+    fotosRDO.forEach((foto, i) => {
+        const nome = `${rdoNumero}_${(i + 1).toString().padStart(4, '0')}.jpg`;
+        
+        const div = document.createElement('div');
+        div.className = 'photo-item';
+        div.innerHTML = `
+            <img src="${foto}" alt="Foto RDO">
+            <button class="photo-remove" onclick="removerFotoRDO(${i})" type="button">×</button>
+            <div class="photo-label">${nome}</div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+function removerFotoRDO(idx) {
+    fotosRDO.splice(idx, 1);
+    renderFotosRDO();
+}
+
+/* ========== ASSINATURA ========== */
+function setupSignaturePad() {
+    const canvas = document.getElementById('signature-pad');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    
+    function start(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        lastX = (e.clientX || e.touches[0].clientX) - rect.left;
+        lastY = (e.clientY || e.touches[0].clientY) - rect.top;
+    }
+    
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        
+        lastX = x;
+        lastY = y;
+    }
+    
+    function stop() {
+        isDrawing = false;
+    }
+    
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stop);
+    canvas.addEventListener('mouseout', stop);
+    
+    canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stop);
+    
+    signaturePad = { canvas, ctx };
+}
+
+function limparAssinatura() {
+    if (!signaturePad) return;
+    const { canvas, ctx } = signaturePad;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function obterAssinatura() {
+    if (!signaturePad) return null;
+    return signaturePad.canvas.toDataURL('image/png');
+}
+
+/* ========== SALVAR RDO ========== */
+async function salvarRDO(e) {
+    e.preventDefault();
+    
+    if (!rdoNumero) {
+        alert('Selecione uma obra!');
+        return;
+    }
+    
+    try {
         UTILS.showLoading();
         
-        // Dados principais do RDO
-        const rdoData = {
-            obra_id: obraId,
-            data: data,
-            hora_chegada_campo: document.getElementById('rdo-hora-chegada').value || null,
-            hora_inicio_trabalho: document.getElementById('rdo-hora-inicio').value || null,
-            teve_pts: document.getElementById('rdo-teve-pts').value === 'true',
-            numero_pts: document.getElementById('rdo-numero-pts').value || null,
-            anotacoes_observacoes: document.getElementById('rdo-observacoes').value.trim() || null
+        // 1. RDO principal
+        const tevePTS = document.querySelector('input[name="teve_pts"]:checked')?.value === 'sim';
+        const dadosRDO = {
+            obra_id: document.getElementById('obra_id').value,
+            numero: rdoNumero,
+            data: document.getElementById('data').value,
+            teve_pts: tevePTS,
+            atividade_pts: tevePTS ? document.getElementById('atividade_pts').value : null,
+            assinatura_url: null
         };
         
-        // Inserir RDO principal
-        const rdoInserido = await DB.insertData('rdos', rdoData);
+        const rdoInserido = await DB.insertData('rdos', dadosRDO);
         const rdoId = rdoInserido[0].id;
         
-        console.log('✅ RDO criado com ID:', rdoId);
+        // 2. Colaboradores
+        for (let i = 0; i < equipeLista.length; i++) {
+            const c = equipeLista[i];
+            const status = document.querySelector(`select[data-colab="${i}"][data-field="status"]`)?.value || 'presente';
+            
+            const atividadesDiv = document.getElementById(`atividades-${i}`);
+            const linhas = atividadesDiv.querySelectorAll('.atividade-mini');
+            
+            let totalHH = 0;
+            linhas.forEach(linha => {
+                const atividadeId = linha.querySelector('select').value;
+                const hh = parseFloat(linha.querySelector('input[type="number"]').value) || 0;
+                
+                if (atividadeId && hh > 0) {
+                    totalHH += hh;
+                    DB.insertData('rdo_atividades', {
+                        rdo_id: rdoId,
+                        atividade_id: atividadeId,
+                        colaborador_id: c.id,
+                        horas_homem: hh
+                    });
+                }
+            });
+            
+            await DB.insertData('rdo_colaboradores', {
+                rdo_id: rdoId,
+                colaborador_id: c.id,
+                status: status,
+                horas_trabalhadas: totalHH
+            });
+        }
         
-        // Salvar clima
-        await salvarClima(rdoId);
+        // 3. Ocorrências
+        for (let ocorr of ocorrencias) {
+            const tipo = document.getElementById(`ocorr-tipo-${ocorr.id}`).value;
+            const desc = document.getElementById(`ocorr-desc-${ocorr.id}`).value;
+            
+            const ocorrInserida = await DB.insertData('rdo_ocorrencias', {
+                rdo_id: rdoId,
+                tipo: tipo,
+                descricao: desc,
+                fotos: ocorr.fotos
+            });
+            
+            const ocorrId = ocorrInserida[0].id;
+            
+            for (let i = 0; i < equipeLista.length; i++) {
+                const checkbox = document.getElementById(`ocorr-${ocorr.id}-c-${i}`);
+                const hh = document.getElementById(`ocorr-${ocorr.id}-hh-${i}`).value;
+                
+                if (checkbox?.checked && hh) {
+                    await DB.insertData('rdo_ocorrencias_colaboradores', {
+                        ocorrencia_id: ocorrId,
+                        colaborador_id: equipeLista[i].id,
+                        horas_perdidas: parseFloat(hh)
+                    });
+                }
+            }
+        }
         
-        // Salvar colaboradores
-        await salvarColaboradores(rdoId);
+        // 4. Fotos
+        if (fotosRDO.length > 0) {
+            await DB.insertData('rdo_anexos', {
+                rdo_id: rdoId,
+                tipo: 'foto',
+                arquivos: fotosRDO
+            });
+        }
         
-        // Salvar atividades
-        await salvarAtividades(rdoId);
+        // 5. Assinatura
+        const assinatura = obterAssinatura();
+        if (assinatura) {
+            await DB.updateData('rdos', rdoId, {
+                assinatura_url: assinatura
+            });
+        }
         
-        // Salvar equipamentos
-        await salvarEquipamentos(rdoId);
-        
+        UTILS.hideLoading();
         UTILS.showSuccess('RDO salvo com sucesso!');
         
-        // Redirecionar após 2 segundos
         setTimeout(() => {
             window.location.href = 'lista-rdos.html';
         }, 2000);
         
     } catch (error) {
         console.error('Erro ao salvar RDO:', error);
-        UTILS.showError('Erro ao salvar RDO: ' + error.message);
-    } finally {
+        UTILS.showError('Erro ao salvar RDO');
         UTILS.hideLoading();
     }
 }
 
-async function salvarClima(rdoId) {
-    try {
-        // Clima manhã
-        const climaManha = {
-            rdo_id: rdoId,
-            turno: 'manha',
-            temperatura: parseFloat(document.getElementById('clima-manha-temperatura').value) || null,
-            umidade: parseFloat(document.getElementById('clima-manha-umidade').value) || null,
-            condicao_geral: document.getElementById('clima-manha-condicao').value || null,
-            fonte: 'manual'
-        };
-        
-        if (climaManha.temperatura || climaManha.umidade || climaManha.condicao_geral) {
-            await DB.insertData('rdo_clima', climaManha);
-        }
-        
-        // Clima tarde
-        const climaTarde = {
-            rdo_id: rdoId,
-            turno: 'tarde',
-            temperatura: parseFloat(document.getElementById('clima-tarde-temperatura').value) || null,
-            umidade: parseFloat(document.getElementById('clima-tarde-umidade').value) || null,
-            condicao_geral: document.getElementById('clima-tarde-condicao').value || null,
-            fonte: 'manual'
-        };
-        
-        if (climaTarde.temperatura || climaTarde.umidade || climaTarde.condicao_geral) {
-            await DB.insertData('rdo_clima', climaTarde);
-        }
-        
-    } catch (error) {
-        console.error('Erro ao salvar clima:', error);
-        throw error;
-    }
+/* ========== UTILS ========== */
+function cap(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
-async function salvarColaboradores(rdoId) {
-    try {
-        for (const colab of colaboradoresRDO) {
-            await DB.insertData('rdo_colaboradores', {
-                rdo_id: rdoId,
-                colaborador_id: colab.colaborador_id,
-                status: colab.status,
-                horas_trabalhadas: colab.horas_trabalhadas
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao salvar colaboradores:', error);
-        throw error;
-    }
-}
+window.addAtividade = addAtividade;
+window.removerOcorrencia = removerOcorrencia;
+window.removerOcorrFoto = removerOcorrFoto;
+window.removerFotoRDO = removerFotoRDO;
 
-async function salvarAtividades(rdoId) {
-    try {
-        for (const ativ of atividadesRDO) {
-            await DB.insertData('rdo_atividades', {
-                rdo_id: rdoId,
-                atividade_id: ativ.atividade_id,
-                status: ativ.status,
-                percentual_conclusao: ativ.percentual_conclusao,
-                observacoes: ativ.observacoes
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao salvar atividades:', error);
-        throw error;
-    }
-}
-
-async function salvarEquipamentos(rdoId) {
-    try {
-        for (const equip of equipamentosRDO) {
-            await DB.insertData('rdo_equipamentos', {
-                rdo_id: rdoId,
-                equipamento_id: equip.equipamento_id,
-                horas_trabalhadas: equip.horas_trabalhadas,
-                horimetro_inicial: equip.horimetro_inicial,
-                horimetro_final: equip.horimetro_final
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao salvar equipamentos:', error);
-        throw error;
-    }
-}
-
-// Exportar funções globais
-window.removerColaborador = removerColaborador;
-window.removerAtividade = removerAtividade;
-window.removerEquipamento = removerEquipamento;
-
-console.log('✅ Novo-RDO.js carregado');
+console.log('✅ novo-rdo.js carregado');

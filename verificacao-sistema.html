@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Verificação do Sistema RDO Fidel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #C8102E;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .check-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .check-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .check-item {
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .check-item.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        .check-item.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .check-item.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .check-text {
+            flex: 1;
+        }
+        
+        .check-text strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .check-text small {
+            color: #666;
+            display: block;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #C8102E;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #a00d24;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .summary {
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .summary h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-box .number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-box .label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .success-color { color: #28a745; }
+        .error-color { color: #dc3545; }
+        .warning-color { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Verificação do Sistema</h1>
+            <p>RDO Fidel v2.0 - Diagnóstico Automático</p>
+        </div>
+        
+        <div class="content">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <button class="btn" id="btn-verificar">▶️ Iniciar Verificação</button>
+            </div>
+            
+            <!-- Seção 1: Supabase -->
+            <div class="check-section" id="section-supabase">
+                <h2>📡 Conexão Supabase</h2>
+                <div id="checks-supabase"></div>
+            </div>
+            
+            <!-- Seção 2: Database.js -->
+            <div class="check-section" id="section-database">
+                <h2>🗄️ Database.js</h2>
+                <div id="checks-database"></div>
+            </div>
+            
+            <!-- Seção 3: Banco de Dados -->
+            <div class="check-section" id="section-banco">
+                <h2>💾 Banco de Dados</h2>
+                <div id="checks-banco"></div>
+            </div>
+            
+            <!-- Seção 4: Dados de Teste -->
+            <div class="check-section" id="section-dados">
+                <h2>👥 Dados de Teste</h2>
+                <div id="checks-dados"></div>
+            </div>
+            
+            <!-- Resumo -->
+            <div class="summary" id="summary" style="display: none;">
+                <h3>📊 Resumo da Verificação</h3>
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="number success-color" id="stat-success">0</div>
+                        <div class="label">Sucesso</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number warning-color" id="stat-warning">0</div>
+                        <div class="label">Avisos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number error-color" id="stat-error">0</div>
+                        <div class="label">Erros</div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <strong id="summary-message"></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/database.js"></script>
+    
+    <script>
+        let stats = { success: 0, warning: 0, error: 0 };
+        
+        function addCheck(sectionId, type, title, message) {
+            const container = document.getElementById(`checks-${sectionId}`);
+            const div = document.createElement('div');
+            div.className = `check-item ${type}`;
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
+            
+            div.innerHTML = `
+                <div class="icon">${icon}</div>
+                <div class="check-text">
+                    <strong>${title}</strong>
+                    <small>${message}</small>
+                </div>
+            `;
+            
+            container.appendChild(div);
+            stats[type]++;
+        }
+        
+        async function verificarSupabase() {
+            try {
+                // Check 1: Biblioteca carregada
+                if (typeof window.supabase !== 'undefined') {
+                    addCheck('supabase', 'success', 
+                        'Biblioteca Supabase Carregada', 
+                        'window.supabase está definido');
+                } else {
+                    addCheck('supabase', 'error', 
+                        'Biblioteca Supabase NÃO Carregada', 
+                        'window.supabase está undefined');
+                    return false;
+                }
+                
+                // Check 2: Config carregado
+                if (typeof SUPABASE_CONFIG !== 'undefined') {
+                    addCheck('supabase', 'success', 
+                        'Configuração Carregada', 
+                        `URL: ${SUPABASE_CONFIG.url}`);
+                } else {
+                    addCheck('supabase', 'error', 
+                        'Configuração NÃO Carregada', 
+                        'SUPABASE_CONFIG não encontrado');
+                    return false;
+                }
+                
+                return true;
+            } catch (error) {
+                addCheck('supabase', 'error', 'Erro ao verificar Supabase', error.message);
+                return false;
+            }
+        }
+        
+        async function verificarDatabase() {
+            try {
+                // Check 1: Cliente criado
+                if (window.supabase && typeof window.supabase.from === 'function') {
+                    addCheck('database', 'success', 
+                        'Cliente Supabase Criado Corretamente', 
+                        'window.supabase.from() está disponível');
+                } else {
+                    addCheck('database', 'error', 
+                        'Cliente Supabase NÃO Criado', 
+                        'window.supabase.from() não é uma função');
+                    return false;
+                }
+                
+                // Check 2: Funções DB exportadas
+                if (typeof window.DB !== 'undefined') {
+                    addCheck('database', 'success', 
+                        'Funções DB Exportadas', 
+                        'window.DB está disponível');
+                } else {
+                    addCheck('database', 'warning', 
+                        'Funções DB Não Exportadas', 
+                        'window.DB não encontrado (opcional)');
+                }
+                
+                return true;
+            } catch (error) {
+                addCheck('database', 'error', 'Erro ao verificar Database', error.message);
+                return false;
+            }
+        }
+        
+        async function verificarBanco() {
+            try {
+                // Check 1: Conexão com banco
+                const { data: obras, error } = await window.supabase
+                    .from('obras')
+                    .select('id, nome')
+                    .limit(1);
+                
+                if (error) {
+                    addCheck('banco', 'error', 
+                        'Erro de Conexão com Banco', 
+                        error.message);
+                    return false;
+                }
+                
+                if (obras && obras.length > 0) {
+                    addCheck('banco', 'success', 
+                        'Conexão com Banco OK', 
+                        `Obra encontrada: ${obras[0].nome}`);
+                } else {
+                    addCheck('banco', 'warning', 
+                        'Banco Vazio', 
+                        'Nenhuma obra encontrada');
+                }
+                
+                // Check 2: Tabelas essenciais
+                const tabelas = ['colaboradores', 'equipes', 'atividades'];
+                for (const tabela of tabelas) {
+                    try {
+                        const { error } = await window.supabase
+                            .from(tabela)
+                            .select('id')
+                            .limit(1);
+                        
+                        if (!error) {
+                            addCheck('banco', 'success', 
+                                `Tabela ${tabela} Acessível`, 
+                                'Conexão OK');
+                        } else {
+                            addCheck('banco', 'error', 
+                                `Tabela ${tabela} Inacessível`, 
+                                error.message);
+                        }
+                    } catch (e) {
+                        addCheck('banco', 'error', 
+                            `Erro ao acessar ${tabela}`, 
+                            e.message);
+                    }
+                }
+                
+                return true;
+            } catch (error) {
+                addCheck('banco', 'error', 'Erro ao verificar Banco', error.message);
+                return false;
+            }
+        }
+        
+        async function verificarDados() {
+            try {
+                // Check 1: Supervisores
+                const { data: supervisores, error: errSup } = await window.supabase
+                    .from('colaboradores')
+                    .select('*')
+                    .eq('funcao', 'supervisor');
+                
+                if (!errSup && supervisores) {
+                    addCheck('dados', 'success', 
+                        `Supervisores Encontrados: ${supervisores.length}`, 
+                        'Dados de teste carregados');
+                } else {
+                    addCheck('dados', 'warning', 
+                        'Nenhum Supervisor Encontrado', 
+                        'Execute o SQL de dados de exemplo');
+                }
+                
+                // Check 2: Encarregados
+                const { data: encarregados, error: errEnc } = await window.supabase
+                    .from('colaboradores')
+                    .select('*')
+                    .eq('funcao', 'encarregado');
+                
+                if (!errEnc && encarregados) {
+                    addCheck('dados', 'success', 
+                        `Encarregados Encontrados: ${encarregados.length}`, 
+                        'Dados de teste carregados');
+                } else {
+                    addCheck('dados', 'warning', 
+                        'Nenhum Encarregado Encontrado', 
+                        'Execute o SQL de dados de exemplo');
+                }
+                
+                // Check 3: Colaboradores
+                const { data: colaboradores, error: errCol } = await window.supabase
+                    .from('colaboradores')
+                    .select('*')
+                    .is('funcao', null);
+                
+                if (!errCol && colaboradores) {
+                    addCheck('dados', 'success', 
+                        `Colaboradores Encontrados: ${colaboradores.length}`, 
+                        'Dados de teste carregados');
+                }
+                
+                return true;
+            } catch (error) {
+                addCheck('dados', 'error', 'Erro ao verificar Dados', error.message);
+                return false;
+            }
+        }
+        
+        function atualizarSumario() {
+            document.getElementById('stat-success').textContent = stats.success;
+            document.getElementById('stat-warning').textContent = stats.warning;
+            document.getElementById('stat-error').textContent = stats.error;
+            
+            const total = stats.success + stats.warning + stats.error;
+            const percentual = Math.round((stats.success / total) * 100);
+            
+            let message = '';
+            if (stats.error === 0 && stats.warning === 0) {
+                message = '🎉 Sistema 100% Funcional! Tudo OK!';
+            } else if (stats.error === 0) {
+                message = `✅ Sistema Funcional (${percentual}% OK) - ${stats.warning} avisos`;
+            } else {
+                message = `⚠️ Sistema com Problemas - ${stats.error} erros encontrados`;
+            }
+            
+            document.getElementById('summary-message').textContent = message;
+            document.getElementById('summary').style.display = 'block';
+        }
+        
+        async function iniciarVerificacao() {
+            const btn = document.getElementById('btn-verificar');
+            btn.disabled = true;
+            btn.textContent = '⏳ Verificando...';
+            
+            // Limpar checks anteriores
+            stats = { success: 0, warning: 0, error: 0 };
+            document.querySelectorAll('[id^="checks-"]').forEach(el => el.innerHTML = '');
+            document.getElementById('summary').style.display = 'none';
+            
+            // Executar verificações
+            await verificarSupabase();
+            await verificarDatabase();
+            await verificarBanco();
+            await verificarDados();
+            
+            // Atualizar sumário
+            atualizarSumario();
+            
+            btn.disabled = false;
+            btn.textContent = '🔄 Verificar Novamente';
+        }
+        
+        document.getElementById('btn-verificar').addEventListener('click', iniciarVerificacao);
+    </script>
+</body>
+</html>
